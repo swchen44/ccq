@@ -40,6 +40,7 @@ EDIT (symbol-level, Serena-parity):
 
 EXPORT (query with your own tools):
   export [--format json|sql] [--out f]   dump symbols + call graph
+  fnptr                   validate the fn-pointer override table (ccq.fnptr.json)
 
 PROJECT:
   init                    detect/generate compile_commands.json (or compile_flags.txt, no-build)
@@ -60,7 +61,7 @@ const version = "ccq 0.3.0"
 var queryCmds = map[string]bool{
 	"search": true, "def": true, "show": true, "refs": true, "usages": true,
 	"callers": true, "callees": true, "impact": true, "explore": true,
-	"symbols": true, "macro": true, "rename": true, "export": true,
+	"symbols": true, "macro": true, "rename": true, "export": true, "fnptr": true,
 }
 
 func main() {

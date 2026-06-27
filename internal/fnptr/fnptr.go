@@ -63,8 +63,9 @@ func Callers(root, handler string) []Caller {
 			}
 		}
 	}
+	manual := idx.manualLinks[handler]
 	if len(keys) == 0 {
-		return nil
+		return manual // may be nil; or direct edges from the override table
 	}
 	keySet := map[reg]bool{}
 	for _, k := range keys {
@@ -101,13 +102,13 @@ func Callers(root, handler string) []Caller {
 					seen[key] = true
 					out = append(out, Caller{Func: fn, File: f, Line: i + 1, Field: st + "." + field})
 					if added++; added >= fanoutCap {
-						return out
+						return append(out, manual...)
 					}
 				}
 			}
 		}
 	}
-	return out
+	return append(out, manual...)
 }
 
 type index struct {
@@ -117,7 +118,8 @@ type index struct {
 	structLayout   map[string][]fieldInfo
 	fieldToStructs map[string][]string
 	registrations  map[reg][]string
-	funcDefs       map[string]bool // function names with a definition (real-function gate)
+	funcDefs       map[string]bool     // function names with a definition (real-function gate)
+	manualLinks    map[string][]Caller // handler -> direct callers from the override table
 }
 
 func build(root string) *index {
@@ -128,6 +130,7 @@ func build(root string) *index {
 		fieldToStructs: map[string][]string{},
 		registrations:  map[reg][]string{},
 		funcDefs:       map[string]bool{},
+		manualLinks:    map[string][]Caller{},
 	}
 	ix.files = cFiles(root)
 	for _, f := range ix.files {
@@ -183,7 +186,40 @@ func build(root string) *index {
 			break
 		}
 	}
+	// Manual override table (ground truth the text scan can't infer).
+	if t, _, err := LoadTable(root); err == nil && t != nil {
+		ix.mergeTable(t)
+	}
 	return ix
+}
+
+// mergeTable folds a user override into the index: registrations augment the
+// auto-discovered (struct,field) map (bypassing the real-function gate, since
+// the user declared them); links become direct dispatcher→handler edges.
+func (ix *index) mergeTable(t *Table) {
+	for _, r := range t.Registrations {
+		// ensure the field is known as a fn-pointer field so dispatch detection links it
+		if !structHasField(ix.structLayout[r.Struct], r.Field) {
+			ix.structLayout[r.Struct] = append(ix.structLayout[r.Struct],
+				fieldInfo{Name: r.Field, Index: len(ix.structLayout[r.Struct]), FnPtr: true})
+		}
+		ix.fieldToStructs[r.Field] = appendUniq(ix.fieldToStructs[r.Field], r.Struct)
+		k := reg{r.Struct, r.Field}
+		for _, h := range r.Handlers {
+			if !contains(ix.registrations[k], h) {
+				ix.registrations[k] = append(ix.registrations[k], h)
+			}
+		}
+	}
+	for _, l := range t.Links {
+		field := "manual"
+		if l.Note != "" {
+			field = "manual:" + l.Note
+		}
+		for _, h := range l.To {
+			ix.manualLinks[h] = append(ix.manualLinks[h], Caller{Func: l.From, File: "ccq.fnptr.json", Line: 0, Field: field})
+		}
+	}
 }
 
 func (ix *index) scanStructs(f string) {

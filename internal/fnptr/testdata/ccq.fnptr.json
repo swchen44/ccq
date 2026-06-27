@@ -1,0 +1,8 @@
+{
+  "registrations": [
+    { "struct": "io", "field": "read", "handlers": ["late_io_read"] }
+  ],
+  "links": [
+    { "from": "event_loop", "to": ["io_read"], "note": "registered callback" }
+  ]
+}

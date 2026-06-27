@@ -66,10 +66,34 @@ func (c *Ctx) Dispatch(r Request) bool {
 		c.Rename(a(0), a(1), r.Apply)
 	case "export":
 		c.Export(r.Format, r.OutPath)
+	case "fnptr":
+		c.FnptrCheck()
 	default:
 		return false
 	}
 	return true
+}
+
+// FnptrCheck validates the fn-pointer override table (ccq.fnptr.json) against
+// the project's symbols and reports warnings.
+func (c *Ctx) FnptrCheck() {
+	found, warnings, err := fnptr.Check(c.Root)
+	if err != nil {
+		fmt.Fprintf(c.Out, "fnptr table error: %v\n", err)
+		return
+	}
+	if !found {
+		fmt.Fprintln(c.Out, "no fnptr override table (create ccq.fnptr.json to add manual associations)")
+		return
+	}
+	if len(warnings) == 0 {
+		fmt.Fprintln(c.Out, "fnptr table: OK (no warnings)")
+		return
+	}
+	fmt.Fprintf(c.Out, "fnptr table: %d warning(s)\n", len(warnings))
+	for _, w := range warnings {
+		fmt.Fprintf(c.Out, "  - %s\n", w)
+	}
 }
 
 // resolveSymbol maps a bare symbol name to a definition location.
