@@ -4,3 +4,5 @@ ccq-*-*
 *.test
 .cache/
 dist/
+cmd/ccq/testdata/cproj/compile_commands.json
+cmd/ccq/testdata/cproj/.cache/

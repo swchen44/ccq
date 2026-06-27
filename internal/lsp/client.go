@@ -18,10 +18,10 @@ import (
 
 // Client wraps a clangd subprocess speaking LSP over stdio.
 type Client struct {
-	cmd     *exec.Cmd
-	stdin   io.WriteCloser
-	stdout  *bufio.Reader
-	root    string
+	cmd      *exec.Cmd
+	stdin    io.WriteCloser
+	stdout   *bufio.Reader
+	root     string
 	mu       sync.Mutex
 	nextID   int
 	pending  map[int]chan json.RawMessage

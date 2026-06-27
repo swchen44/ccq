@@ -30,21 +30,21 @@ type Caller struct {
 type reg struct{ Struct, Field string }
 
 type fieldInfo struct {
-	Name   string
-	Index  int
-	FnPtr  bool
+	Name  string
+	Index int
+	FnPtr bool
 }
 
 var (
-	reTypedefFn  = regexp.MustCompile(`typedef\s+[\w\s\*]+\(\s*\*\s*(\w+)\s*\)\s*\(`)
-	reStructHdr  = regexp.MustCompile(`\bstruct\s+(\w+)\s*\{`)
-	reFieldFnPtr = regexp.MustCompile(`\(\s*\*\s*(\w+)\s*\)\s*\(`) // RET (*name)(...)
-	reFieldAny   = regexp.MustCompile(`\b(\w+)\s*;`)               // ...; -> last ident is field name
-	reInitHdr    = regexp.MustCompile(`\bstruct\s+(\w+)\s+\w+(?:\[\s*\w*\s*\])?\s*=\s*\{`)
-	reDesignated = regexp.MustCompile(`^\.\s*(\w+)\s*=\s*&?\s*(\w+)\s*$`)
-	reIdent      = regexp.MustCompile(`^&?\s*(\w+)\s*$`)
-	reDispatch   = regexp.MustCompile(`(\w+)\s*(?:->|\.)\s*(\w+)\s*\(`)
-	reFieldAssign = regexp.MustCompile(`(\w+)\s*(?:->|\.)\s*(\w+)\s*=\s*(\w+)\s*(?:->|\.)\s*(\w+)`)
+	reTypedefFn    = regexp.MustCompile(`typedef\s+[\w\s\*]+\(\s*\*\s*(\w+)\s*\)\s*\(`)
+	reStructHdr    = regexp.MustCompile(`\bstruct\s+(\w+)\s*\{`)
+	reFieldFnPtr   = regexp.MustCompile(`\(\s*\*\s*(\w+)\s*\)\s*\(`) // RET (*name)(...)
+	reFieldAny     = regexp.MustCompile(`\b(\w+)\s*;`)               // ...; -> last ident is field name
+	reInitHdr      = regexp.MustCompile(`\bstruct\s+(\w+)\s+\w+(?:\[\s*\w*\s*\])?\s*=\s*\{`)
+	reDesignated   = regexp.MustCompile(`^\.\s*(\w+)\s*=\s*&?\s*(\w+)\s*$`)
+	reIdent        = regexp.MustCompile(`^&?\s*(\w+)\s*$`)
+	reDispatch     = regexp.MustCompile(`(\w+)\s*(?:->|\.)\s*(\w+)\s*\(`)
+	reFieldAssign  = regexp.MustCompile(`(\w+)\s*(?:->|\.)\s*(\w+)\s*=\s*(\w+)\s*(?:->|\.)\s*(\w+)`)
 	reFuncDefBrace = regexp.MustCompile(`\b([A-Za-z_]\w*)\s*\([^()]*\)\s*\{`)
 	reFuncDefHdr   = regexp.MustCompile(`^[A-Za-z_].*\b([A-Za-z_]\w*)\s*\([^;{]*$`)
 )

@@ -335,8 +335,8 @@ func (c *Ctx) Symbols(file string) {
 		return
 	}
 	var syms []struct {
-		Name string `json:"name"`
-		Kind int    `json:"kind"`
+		Name  string    `json:"name"`
+		Kind  int       `json:"kind"`
 		Range lsp.Range `json:"range"`
 	}
 	json.Unmarshal(res, &syms)
