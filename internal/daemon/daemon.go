@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/swchen44/ccq/internal/cmd"
+	"github.com/swchen44/ccq/internal/gitdiff"
 	"github.com/swchen44/ccq/internal/lsp"
 )
 
@@ -49,6 +50,33 @@ func stateDir(root string) string {
 
 func addrFile(root string) string { return filepath.Join(stateDir(root), "addr") }
 
+// hasStaticIndex reports whether clangd has persisted a background index for root.
+func hasStaticIndex(root string) bool {
+	entries, err := os.ReadDir(filepath.Join(root, ".cache", "clangd", "index"))
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if filepath.Ext(e.Name()) == ".idx" {
+			return true
+		}
+	}
+	return false
+}
+
+func revFile(dir string) string { return filepath.Join(dir, "indexed_rev") }
+
+func readRev(dir string) string {
+	b, _ := os.ReadFile(revFile(dir))
+	return strings.TrimSpace(string(b))
+}
+
+func writeRev(dir, rev string) {
+	if rev != "" {
+		os.WriteFile(revFile(dir), []byte(rev), 0o644)
+	}
+}
+
 // Serve runs the daemon: warm clangd, listen, handle requests until idle/shutdown.
 func Serve(root, clangdBin, ccDir string, openCap int, maxWait, baseline time.Duration) error {
 	dir := stateDir(root)
@@ -59,8 +87,18 @@ func Serve(root, clangdBin, ccDir string, openCap int, maxWait, baseline time.Du
 		return err
 	}
 	defer client.Close()
+	// Warm restart: if clangd already has a static index on disk, prioritise
+	// re-indexing the files changed since we last indexed, and don't wait as long
+	// for indexing (it's mostly built). OpenAll still runs for correctness.
+	if hasStaticIndex(root) {
+		if changed := gitdiff.ChangedSince(root, readRev(dir)); len(changed) > 0 {
+			client.OpenFiles(changed)
+		}
+		baseline /= 3
+	}
 	client.OpenAll(root, openCap)
 	client.WaitIndex(maxWait, baseline)
+	writeRev(dir, gitdiff.Head(root))
 
 	ln, addr, cleanup, err := listen(dir)
 	if err != nil {

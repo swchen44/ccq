@@ -257,7 +257,24 @@ func (c *Client) WaitIndex(max, baseline time.Duration) {
 // clangd's background static index alone does not reliably populate these on a
 // cold project, so we prime it by opening files. Returns the number opened.
 func (c *Client) OpenAll(root string, cap int) int {
+	return c.openAllAfter(root, cap, nil)
+}
+
+// OpenFiles opens a specific list of files (idempotent), returning how many were
+// newly opened. Used to prioritise changed files on a warm restart.
+func (c *Client) OpenFiles(files []string) int {
 	n := 0
+	for _, f := range files {
+		if c.Open(f) == nil {
+			n++
+		}
+	}
+	return n
+}
+
+// openAllAfter opens priority files first, then walks the tree for the rest.
+func (c *Client) openAllAfter(root string, cap int, priority []string) int {
+	n := c.OpenFiles(priority)
 	filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			if info != nil && info.IsDir() {
