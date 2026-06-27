@@ -1,4 +1,3 @@
-version: "2"
 run:
   timeout: 3m
 linters:
@@ -9,6 +8,4 @@ linters:
     - ineffassign
     - unused
     - misspell
-formatters:
-  enable:
     - gofmt
