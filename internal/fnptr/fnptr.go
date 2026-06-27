@@ -111,6 +111,59 @@ func Callers(root, handler string) []Caller {
 	return append(out, manual...)
 }
 
+// Callees returns the handlers that fn dispatches to via `obj->field()` (the
+// reverse of Callers): for each dispatch site inside fn it resolves the
+// (struct, field) and returns the registered handlers, plus any manual links
+// declared from fn. Used to enrich `ccq callees`.
+func Callees(root, fn string) []string {
+	idx := build(root)
+	seen := map[string]bool{}
+	var out []string
+	add := func(h string) {
+		if h != "" && h != fn && !seen[h] {
+			seen[h] = true
+			out = append(out, h)
+		}
+	}
+	// manual links declared from fn
+	for h, callers := range idx.manualLinks {
+		for _, c := range callers {
+			if c.Func == fn {
+				add(h)
+			}
+		}
+	}
+	// dispatch sites whose enclosing function is fn
+	for _, f := range idx.files {
+		lines := idx.lines[f]
+		for i, ln := range lines {
+			s := stripComment(ln)
+			if !reDispatch.MatchString(s) || enclosingFunc(lines, i) != fn {
+				continue
+			}
+			for _, m := range reDispatch.FindAllStringSubmatch(s, -1) {
+				recv, field := m[1], m[2]
+				owners := idx.fieldToStructs[field]
+				if len(owners) == 0 {
+					continue
+				}
+				st := idx.recvType(lines, i, recv)
+				if st == "" || !contains(owners, st) {
+					if len(owners) == 1 {
+						st = owners[0]
+					} else {
+						continue
+					}
+				}
+				for _, h := range idx.registrations[reg{st, field}] {
+					add(h)
+				}
+			}
+		}
+	}
+	return out
+}
+
 type index struct {
 	files          []string
 	lines          map[string][]string

@@ -64,6 +64,24 @@ func TestKeyIsStructDotField(t *testing.T) {
 	}
 }
 
+// TestCalleesReverse: run_builtin dispatches via cmd.fn, so its fn-pointer
+// callees are the registered handlers cmd_add and cmd_rm.
+func TestCalleesReverse(t *testing.T) {
+	got := Callees(dir, "run_builtin")
+	want := map[string]bool{"cmd_add": true, "cmd_rm": true}
+	for w := range want {
+		found := false
+		for _, g := range got {
+			if g == w {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("Callees(run_builtin) missing %q; got %v", w, got)
+		}
+	}
+}
+
 // TestUnknownHandlerNoPanic: a handler that is registered nowhere yields nil.
 func TestUnknownHandlerNoPanic(t *testing.T) {
 	if c := Callers(dir, "does_not_exist"); c != nil {

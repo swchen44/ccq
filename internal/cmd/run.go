@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -250,20 +251,55 @@ func (c *Ctx) Callers(name string) {
 	}
 }
 
-// Callees: what this calls.
+var reCallSite = regexp.MustCompile(`\b([A-Za-z_]\w*)\s*\(`)
+
+func isCKeyword(s string) bool {
+	switch s {
+	case "if", "for", "while", "switch", "return", "sizeof", "do", "else", "case", "defined":
+		return true
+	}
+	return false
+}
+
+// Callees: what this calls. clangd's outgoingCalls is unreliable, so we union it
+// with a scan of the function body (call sites verified against the symbol index)
+// and the fn-pointer dispatch targets.
 func (c *Ctx) Callees(name string) {
 	file, pos, ok := c.resolveSymbol(name)
 	if !ok {
 		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
 		return
 	}
-	items, _ := c.Client.PrepareCallHierarchy(file, pos)
-	var out []string
-	if len(items) > 0 {
+	set := map[string]bool{}
+	// 1) clangd outgoingCalls (when it returns anything)
+	if items, _ := c.Client.PrepareCallHierarchy(file, pos); len(items) > 0 {
 		callees, _ := c.Client.OutgoingCalls(items[0])
 		for _, x := range callees {
-			out = append(out, x.Name)
+			set[x.Name] = true
 		}
+	}
+	// 2) body-scan: call sites in the function body that resolve to a known symbol
+	if locs, _ := c.Client.Definition(file, pos); len(locs) > 0 {
+		l := locs[0]
+		f := lsp.URIToPath(l.URI)
+		body := lsp.Snippet(f, l.Range.Start.Line, l.Range.End.Line)
+		for _, m := range reCallSite.FindAllStringSubmatch(body, -1) {
+			nm := m[1]
+			if nm == name || isCKeyword(nm) || set[nm] {
+				continue
+			}
+			if syms, _ := c.Client.WorkspaceSymbol(nm); hasExactFunc(syms, nm) {
+				set[nm] = true
+			}
+		}
+	}
+	// 3) fn-pointer dispatch targets
+	for _, h := range fnptr.Callees(c.Root, name) {
+		set[h] = true
+	}
+	var out []string
+	for k := range set {
+		out = append(out, k)
 	}
 	out = dedup(out)
 	if c.JSON {
@@ -274,6 +310,18 @@ func (c *Ctx) Callees(name string) {
 	for _, o := range out {
 		fmt.Fprintf(c.Out, "  %s\n", o)
 	}
+	if len(out) == 0 {
+		fmt.Fprintln(c.Out, "  (none)")
+	}
+}
+
+func hasExactFunc(syms []lsp.SymbolInfo, name string) bool {
+	for _, s := range syms {
+		if s.Name == name && isFuncKind(s.Kind) {
+			return true
+		}
+	}
+	return false
 }
 
 // Impact: transitive callers up to depth.
