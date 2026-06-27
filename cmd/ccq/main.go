@@ -59,7 +59,7 @@ FLAGS:
   --no-daemon   run clangd inline (no warm daemon)
 `
 
-const version = "ccq 0.3.0"
+const version = "ccq 0.4.0"
 
 var queryCmds = map[string]bool{
 	"search": true, "def": true, "show": true, "refs": true, "usages": true,

@@ -17,6 +17,8 @@ description: Use when navigating, understanding, or refactoring a C/C++ codebase
 - "Outline this file" → `ccq symbols <file>`
 - "What does this macro expand to / this signature?" → `ccq macro X`
 - "Rename `X` to `Y` safely across the project" → `ccq rename X Y --apply`
+- "Rewrite the body of `X`" → `ccq replace-body X newbody.txt --apply` (dry-run without `--apply`)
+- "Insert code before/after `X`" → `ccq insert-before X snippet.txt` / `ccq insert-after X snippet.txt`
 - "Dump the call graph so I can query it with SQL" → `ccq export --format sql | sqlite3 g.db`
 - "Find this macro" → `ccq search <MACRO>` (macros are indexed; kind shows `macro`)
 
@@ -30,6 +32,7 @@ ccq <command> [args] [-p <project-dir>] [--json]
 - Add `-p <dir>` if not running from the project root.
 - Add `--json` when you need to parse the result programmatically.
 - `callers` / `explore` also report `fnptr` heuristic callers for ops-struct dispatch (marked `fnptr via .field`).
+- For fn-pointer blind spots the text scan can't infer (callbacks, indirect dispatch), add a `ccq.fnptr.json` in the project root (`registrations` + `links`) to declare ground truth; `ccq fnptr` validates it. `callees` now also unions a function-body scan, so it no longer under-reports like clangd's raw `outgoingCalls`.
 
 ## Guidance for agents
 - Prefer **one `ccq explore X`** over multiple grep/Read — it returns source + callers + callees + blast-radius in a single call (token-efficient).

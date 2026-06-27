@@ -46,17 +46,20 @@ symbol-level editing, and a zero-dependency single binary that drops onto a lock
 - `def <sym>` / `show <sym>` — definition source
 - `refs <sym>` — all references
 - `callers <sym>` — who calls this (clangd call hierarchy **+ fnptr heuristic**)
-- `callees <sym>` — what this calls
+- `callees <sym>` — what this calls (clangd + **body-scan** + fnptr dispatch targets)
 - `impact <sym> [-d N]` — transitive callers (blast radius)
 - `explore <sym>` — **one shot**: source + callers + callees + blast-radius
 - `symbols <file>` — file outline
 - `macro <sym>` — macro expansion / signature (clangd hover)
 
-**Edit (symbol-level, Serena-parity)**
-- `rename <sym> <new> [--apply]` — safe workspace-wide rename (dry-run by default)
+**Edit (symbol-level, Serena-parity; dry-run unless `--apply`)**
+- `rename <sym> <new> [--apply]` — safe workspace-wide rename
+- `replace-body <sym> <file> [--apply]` — replace a symbol's whole definition
+- `insert-before <sym> <file>` / `insert-after <sym> <file>` — insert content around a symbol
 
 **Export (query with your own tools)**
 - `export [--format json|sql] [--out f]` — dump symbols + call graph (incl. fnptr edges). `ccq export --format sql | sqlite3 g.db` then query with plain SQL — a zero-dependency substitute for an in-tool query language.
+- `fnptr` — validate the fn-pointer override table (`ccq.fnptr.json`)
 
 **Project**
 - `init` — locate/generate `compile_commands.json` (CMake / Meson / bear), **or a no-build `compile_flags.txt`** if there's no build system; warm clangd
@@ -64,6 +67,14 @@ symbol-level editing, and a zero-dependency single binary that drops onto a lock
 
 **Differentiators**
 - **fn-pointer dispatch** — `callers`/`explore` parse ops-struct registrations and `obj->fn()` dispatch to synthesize `dispatcher → handler` edges. Keyed by **(struct type, field)** so same-named fields in different structs don't cross-bleed; handles **designated init, positional tables `{"n", fn}`, and field←field propagation** (ported from CodeGraph's synthesizer). clangd alone won't do this.
+- **fn-pointer override table** — for the blind spots the text scan can't infer (callbacks, indirect dispatch), drop a `ccq.fnptr.json` in the project root to declare ground truth, merged with the automatic scan (JSON, zero-dependency):
+  ```json
+  {
+    "registrations": [ { "struct": "wpa_driver_ops", "field": "scan2", "handlers": ["wpa_driver_bsd_scan"] } ],
+    "links":         [ { "from": "eloop_run", "to": ["wext_scan_timeout"], "note": "eloop timer callback" } ]
+  }
+  ```
+  `registrations` augment a struct.field's handlers; `links` add direct `dispatcher → handler` edges. `ccq fnptr` validates the table.
 - **No-build mode** — when there's no `compile_commands.json` and no build system, `ccq init` writes a `compile_flags.txt` (auto-discovered `-I` include dirs). clangd then resolves **cross-file** (with ccq's file priming) **without a build** — cbm-style breadth, at lower accuracy (`#ifdef` over-included, no `-D`). Accuracy ladder: compile_commands.json > compile_flags.txt > same-file.
 - **Macros** — clangd indexes `#define`s; they appear in `ccq search` (kind `macro`) and `ccq macro` expands them.
 
@@ -146,20 +157,22 @@ ccq is deliberately a thin layer over clangd; it inherits clangd's strengths and
 
 - **Function-pointer heuristic (`fnptr`)** — text-based and intentionally *over-approximating*:
   it links a dispatcher to **all** handlers registered to that `(struct, field)` (candidates, not
-  the single runtime target). It does **not** resolve: callbacks passed as arguments then invoked
+  the single runtime target). It does **not** auto-resolve: callbacks passed as arguments then invoked
   elsewhere (`eloop_register_timeout(cb, …)` → later `e->cb()`), indirect receivers `(*p)->fn()`,
   array-indexed dispatch `arr[i]->fn()`, return-value dispatch `get_fn()()`, or fn-pointers stored
   in plain (non-struct) variables. Positional tables and multi-line registrations are best-effort.
-- **Callees** — clangd's `outgoingCalls` is unreliable, so `callees` (and the callees half of
-  `explore`) can under-report. `callers`/`impact`/`export` use the solid `incomingCalls` path.
-  (Roadmap: build callees from a function-body scan.)
+  **Mitigation:** declare these in a [`ccq.fnptr.json`](#differentiators) override table.
+- **Callees** — clangd's `outgoingCalls` is unreliable, so `callees` unions it with a function-body
+  scan (call sites verified against the symbol index) and fn-pointer dispatch targets. Body-scan can
+  still miss calls hidden behind macros.
 - **Callback / event dispatch** — "register now, call later" flows (eloop/timer/signal) aren't
   resolved — a blind spot shared by all static tools (cscope, clangd included).
 - **No-build mode accuracy** — `compile_flags.txt` gives cross-file reach without a build, but with
   guessed includes and no `-D`: `#ifdef` branches are over-included and macro-dependent code may be
   wrong. Use a real `compile_commands.json` for config-accurate results.
 - **Cold start & scale** — the first query spawns the daemon and indexes the repo (~30s on redis);
-  clangd's index uses RAM proportional to repo size. Warm queries are sub-second.
+  clangd's index uses RAM proportional to repo size. Warm queries are sub-second, and a warm restart
+  re-indexes changed files first. (A full "open only changed files" mode is on the v0.5 roadmap.)
 - **Dependencies / scope** — needs a `clangd` binary (the engine) and, for best accuracy, a compile
   database. **C/C++ only** by design (cross-language breadth is what tree-sitter tools like cbm are for).
 
@@ -254,7 +267,8 @@ unit test for new logic (and an integration test if it touches the clangd path).
 
 | Version | Date | Highlights |
 |---------|------|-----------|
-| [**0.3.0**](https://github.com/swchen44/ccq/releases/tag/v0.3.0) (first public release) | 2026-06-27 | fn-pointer upgrade (struct-keyed, positional, field←field), no-build mode, macro search, graph export |
+| [**0.4.0**](https://github.com/swchen44/ccq/releases/tag/v0.4.0) | 2026-06-28 | fn-pointer override table, `replace-body`/`insert`, callees body-scan fix, git-diff warm restart |
+| [0.3.0](https://github.com/swchen44/ccq/releases/tag/v0.3.0) (first public release) | 2026-06-27 | fn-pointer upgrade (struct-keyed, positional, field←field), no-build mode, macro search, graph export |
 | 0.2.0 (milestone) | 2026-06-26 | warm-clangd daemon (sub-second warm queries) |
 | 0.1.0 (milestone) | 2026-06-26 | navigation + rename + fnptr heuristic |
 
@@ -262,9 +276,11 @@ Full notes: [CHANGELOG.md](CHANGELOG.md). Latest binaries: [Releases](https://gi
 
 ## Roadmap / TODO
 
-- [ ] `callees` via function-body scan (clangd's `outgoingCalls` is unreliable; build from the body)
-- [ ] More editing: `replace-body`, `insert-before/after` (Serena parity)
-- [ ] git-diff incremental re-index for very large repos
+- [x] `callees` via function-body scan (clangd's `outgoingCalls` is unreliable) — *done in 0.4*
+- [x] More editing: `replace-body`, `insert-before/after` (Serena parity) — *done in 0.4*
+- [x] fn-pointer override table (`ccq.fnptr.json`) for blind spots — *done in 0.4*
+- [ ] **v0.5: full git-diff incremental** — open *only* changed files on warm restart (needs an
+      open-on-demand query path; 0.4 ships the safe version: changed-files-first + shorter index wait)
 - [ ] More build systems (Bazel, xmake) for `ccq init`
 - [ ] fn-pointer heuristic: positional-table edge cases, comment-aware multi-line registrations
 

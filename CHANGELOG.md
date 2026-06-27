@@ -3,6 +3,25 @@
 All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.4.0] — 2026-06-28
+### Added
+- **fn-pointer override table** — `ccq.fnptr.json` (JSON, zero-dependency) lets you
+  declare ground-truth associations the text scan can't infer: `registrations`
+  (augment a struct.field's handlers) and `links` (direct dispatcher→handler, for
+  callbacks / indirect dispatch). Merged with the automatic scan. `ccq fnptr` validates it.
+- **`replace-body` / `insert-before` / `insert-after`** — symbol-level editing
+  (Serena-parity): replace a symbol's whole definition or insert around it
+  (dry-run by default, `--apply` to write).
+- **git-diff warm restart** — the daemon detects clangd's persisted index and
+  prioritises re-indexing files changed since the last index (shorter index wait).
+### Fixed
+- **`callees`** now unions clangd `outgoingCalls` with a function-body scan (verified
+  against the symbol index) and fn-pointer dispatch targets — clangd's `outgoingCalls`
+  alone was unreliable and often empty.
+- **`export`** node line numbers and call-hierarchy positions: clangd returns flat
+  `SymbolInformation` (`location.range`), which was being read as a hierarchical
+  `range` (always 0). Now parsed correctly.
+
 ## [0.3.0] — 2026-06-27 — first public release
 ### Added
 - **fn-pointer dispatch (upgraded)** — keyed by `(struct type, field)` so same-named
@@ -29,7 +48,8 @@ All notable changes to ccq are documented here. Format follows
   `compile_commands.json` auto-detect (CMake/Meson/bear), agent SKILL.md.
   Single static Go binary, zero dependencies, cross-platform.
 
-[Unreleased]: https://github.com/swchen44/ccq/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/swchen44/ccq/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/swchen44/ccq/releases/tag/v0.4.0
 [0.3.0]: https://github.com/swchen44/ccq/releases/tag/v0.3.0
 [0.2.0]: https://github.com/swchen44/ccq/releases/tag/v0.2.0
 [0.1.0]: https://github.com/swchen44/ccq/releases/tag/v0.1.0

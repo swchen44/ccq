@@ -42,8 +42,9 @@ flowchart TB
 | daemon | `internal/daemon/*.go` | keep one clangd warm per project; IPC (Unix socket / TCP); idle shutdown; spawn-on-demand |
 | commands | `internal/cmd/run.go`, `edit.go`, `export.go` | implement each subcommand on an `lsp.Client`; output to an `io.Writer` |
 | LSP client | `internal/lsp/client.go`, `util.go` | drive clangd over JSON-RPC/stdio: symbols, definition, references, call hierarchy, hover, rename |
-| fnptr heuristic | `internal/fnptr/fnptr.go` | resolve `obj->fn()` dispatch to handlers by parsing ops-struct registrations (text only) |
+| fnptr heuristic | `internal/fnptr/fnptr.go`, `table.go` | resolve `obj->fn()` dispatch to handlers (text only); merge a user `ccq.fnptr.json` override (registrations + links) |
 | compile DB | `internal/compdb/compdb.go` | locate/generate `compile_commands.json`, or no-build `compile_flags.txt` |
+| git diff | `internal/gitdiff/gitdiff.go` | files changed since last index, to prioritise re-indexing on a warm daemon restart |
 
 ## 3. Data flow — answering "who calls X"
 
