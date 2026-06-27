@@ -7,10 +7,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
-// Locate returns the directory containing a compile_commands.json, searching
-// root and common build dirs. Returns "" if none found.
+// Locate returns the directory clangd should use as its compile-commands-dir:
+// one containing a compile_commands.json, or (no-build fallback) a
+// compile_flags.txt. Returns "" if neither is found.
 func Locate(root string) string {
 	candidates := []string{
 		root,
@@ -24,7 +26,20 @@ func Locate(root string) string {
 			return d
 		}
 	}
+	if fileExists(filepath.Join(root, "compile_flags.txt")) {
+		return root
+	}
 	return ""
+}
+
+// IsNoBuild reports whether the located config is the lightweight no-build
+// compile_flags.txt (vs a full compile_commands.json).
+func IsNoBuild(root string) bool {
+	if Locate(root) == root && fileExists(filepath.Join(root, "compile_flags.txt")) {
+		// compile_commands at root wins if present
+		return !fileExists(filepath.Join(root, "compile_commands.json"))
+	}
+	return false
 }
 
 // Ensure returns a directory with compile_commands.json, generating one if
@@ -60,8 +75,46 @@ func Ensure(root string) (dir string, how string, err error) {
 			return root, "bear+make", nil
 		}
 	}
+	// No-build fallback (cbm-style breadth): generate compile_flags.txt with
+	// auto-discovered include dirs. clangd then works cross-file (with ccq's
+	// OpenAll) WITHOUT a build — at lower accuracy (#ifdef over-included, no -D).
+	if err := writeCompileFlags(root); err == nil {
+		return root, "compile_flags(no-build)", nil
+	}
 	return "", "", fmt.Errorf("no compile_commands.json found and could not generate one (need CMake/Meson, or bear+make). " +
 		"Generate manually: `bear -- make` or `cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -B build`")
+}
+
+// writeCompileFlags creates a compile_flags.txt with -I for every directory
+// that contains a header, plus a C standard. This is the no-build mode.
+func writeCompileFlags(root string) error {
+	incl := map[string]bool{}
+	filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			if info != nil && info.IsDir() {
+				b := filepath.Base(p)
+				if b == ".git" || b == "build" || b == ".cache" || b == "node_modules" {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}
+		switch filepath.Ext(p) {
+		case ".h", ".hpp", ".hh", ".hxx":
+			incl[filepath.Dir(p)] = true
+		}
+		return nil
+	})
+	var lines []string
+	lines = append(lines, "-xc", "-std=gnu11")
+	for d := range incl {
+		rel, err := filepath.Rel(root, d)
+		if err != nil {
+			rel = d
+		}
+		lines = append(lines, "-I"+rel)
+	}
+	return os.WriteFile(filepath.Join(root, "compile_flags.txt"), []byte(strings.Join(lines, "\n")+"\n"), 0o644)
 }
 
 func fileExists(p string) bool { _, e := os.Stat(p); return e == nil }

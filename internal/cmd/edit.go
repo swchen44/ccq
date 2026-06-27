@@ -110,7 +110,8 @@ func kindName(k int) string {
 	names := map[int]string{
 		1: "file", 2: "module", 5: "class", 6: "method", 7: "property",
 		8: "field", 9: "constructor", 10: "enum", 11: "interface", 12: "function",
-		13: "variable", 14: "constant", 22: "struct", 23: "event", 26: "typeparam",
+		13: "variable", 14: "constant", 15: "macro", // clangd maps C/C++ macros to kind 15
+		22: "struct", 23: "event", 26: "typeparam",
 	}
 	if n, ok := names[k]; ok {
 		return n

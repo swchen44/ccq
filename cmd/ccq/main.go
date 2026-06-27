@@ -38,8 +38,11 @@ NAVIGATE:
 EDIT (symbol-level, Serena-parity):
   rename <symbol> <new> [--apply]   safe workspace-wide rename (dry-run by default)
 
+EXPORT (query with your own tools):
+  export [--format json|sql] [--out f]   dump symbols + call graph
+
 PROJECT:
-  init                    detect/generate compile_commands.json
+  init                    detect/generate compile_commands.json (or compile_flags.txt, no-build)
   status                  is the warm daemon running?
   shutdown                stop the warm daemon
   version
@@ -52,12 +55,12 @@ FLAGS:
   --no-daemon   run clangd inline (no warm daemon)
 `
 
-const version = "ccq 0.2.0"
+const version = "ccq 0.3.0"
 
 var queryCmds = map[string]bool{
 	"search": true, "def": true, "show": true, "refs": true, "usages": true,
 	"callers": true, "callees": true, "impact": true, "explore": true,
-	"symbols": true, "macro": true, "rename": true,
+	"symbols": true, "macro": true, "rename": true, "export": true,
 }
 
 func main() {
@@ -67,6 +70,7 @@ func main() {
 	}
 	sub := os.Args[1]
 	args, root, jsonOut, clangdBin, depth, noDaemon := parseFlags(os.Args[2:])
+	format, outPath := flagVal("--format"), flagVal("--out")
 	root = absOr(root)
 	clangdBin = resolveClangd(clangdBin)
 	exe, _ := os.Executable()
@@ -111,7 +115,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	req := cmd.Request{Cmd: sub, Args: normalize(sub, args), JSON: jsonOut, Depth: depth, Apply: hasFlag("--apply")}
+	if format == "" {
+		format = "json"
+	}
+	req := cmd.Request{Cmd: sub, Args: normalize(sub, args), JSON: jsonOut, Depth: depth,
+		Apply: hasFlag("--apply"), Format: format, OutPath: outPath}
 
 	// Daemon path (default): fast warm clangd.
 	if !noDaemon {
@@ -130,7 +138,9 @@ func main() {
 func runInline(root, clangdBin string, req cmd.Request) {
 	ccDir := compdb.Locate(root)
 	if ccDir == "" {
-		fmt.Fprintln(os.Stderr, "warning: no compile_commands.json — degraded (same-file) mode. Run `ccq init`.")
+		fmt.Fprintln(os.Stderr, "warning: no compile_commands.json/compile_flags.txt — degraded (same-file) mode. Run `ccq init`.")
+	} else if compdb.IsNoBuild(root) {
+		fmt.Fprintln(os.Stderr, "note: no-build mode (compile_flags.txt) — cross-file works but accuracy is lower than a real build (#ifdef over-included, no -D).")
 	}
 	client, err := lsp.Start(clangdBin, root, ccDir)
 	if err != nil {
@@ -180,6 +190,8 @@ func parseFlags(in []string) (args []string, root string, jsonOut bool, clangdBi
 		case "--no-daemon":
 			noDaemon = true
 		case "--apply":
+		case "--format", "--out":
+			i++ // value consumed via flagVal
 		default:
 			args = append(args, in[i])
 		}
@@ -194,6 +206,16 @@ func hasFlag(f string) bool {
 		}
 	}
 	return false
+}
+
+// flagVal returns the value following flag f in os.Args, or "".
+func flagVal(f string) string {
+	for i, a := range os.Args {
+		if a == f && i+1 < len(os.Args) {
+			return os.Args[i+1]
+		}
+	}
+	return ""
 }
 
 func absOr(p string) string {

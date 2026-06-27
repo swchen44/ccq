@@ -24,11 +24,13 @@ type Ctx struct {
 
 // Request is a command to run (used by direct mode and the daemon).
 type Request struct {
-	Cmd   string   `json:"cmd"`
-	Args  []string `json:"args"`
-	JSON  bool     `json:"json"`
-	Depth int      `json:"depth"`
-	Apply bool     `json:"apply"`
+	Cmd     string   `json:"cmd"`
+	Args    []string `json:"args"`
+	JSON    bool     `json:"json"`
+	Depth   int      `json:"depth"`
+	Apply   bool     `json:"apply"`
+	Format  string   `json:"format"`  // export: json|sql
+	OutPath string   `json:"outPath"` // export: write to file
 }
 
 // Dispatch runs a single command. Output goes to c.Out. Returns false for an
@@ -62,6 +64,8 @@ func (c *Ctx) Dispatch(r Request) bool {
 		c.Macro(a(0))
 	case "rename":
 		c.Rename(a(0), a(1), r.Apply)
+	case "export":
+		c.Export(r.Format, r.OutPath)
 	default:
 		return false
 	}
@@ -215,7 +219,7 @@ func (c *Ctx) Callers(name string) {
 		fmt.Fprintf(c.Out, "  %s\n", r)
 	}
 	for _, h := range heur {
-		fmt.Fprintf(c.Out, "  %s  (fnptr via .%s @ %s:%d)\n", h.Func, h.Field, h.File, h.Line)
+		fmt.Fprintf(c.Out, "  %s  (fnptr via %s @ %s:%d)\n", h.Func, h.Field, h.File, h.Line)
 	}
 	if len(real)+len(heur) == 0 {
 		fmt.Fprintln(c.Out, "  (none)")

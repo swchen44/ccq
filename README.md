@@ -39,11 +39,17 @@ ccq rename old_name new_name --apply   # safe symbol-level rename across the rep
 **Edit (symbol-level, Serena-parity)**
 - `rename <sym> <new> [--apply]` — safe workspace-wide rename (dry-run by default)
 
-**Project**
-- `init` — locate/generate `compile_commands.json` (CMake / Meson / bear) and warm clangd
-- `status`, `version`
+**Export (query with your own tools)**
+- `export [--format json|sql] [--out f]` — dump symbols + call graph (incl. fnptr edges). `ccq export --format sql | sqlite3 g.db` then query with plain SQL — a zero-dependency substitute for an in-tool query language.
 
-**Differentiator** — `callers`/`explore` resolve **function-pointer dispatch**: they parse `struct ops X = { .fn = handler }` registrations and `obj->fn()` dispatch sites to synthesize the `dispatcher → handler` edge (marked `fnptr`). This is what CodeGraph's synthesizer does and clangd does not.
+**Project**
+- `init` — locate/generate `compile_commands.json` (CMake / Meson / bear), **or a no-build `compile_flags.txt`** if there's no build system; warm clangd
+- `status`, `shutdown`, `version`
+
+**Differentiators**
+- **fn-pointer dispatch** — `callers`/`explore` parse ops-struct registrations and `obj->fn()` dispatch to synthesize `dispatcher → handler` edges. Keyed by **(struct type, field)** so same-named fields in different structs don't cross-bleed; handles **designated init, positional tables `{"n", fn}`, and field←field propagation** (ported from CodeGraph's synthesizer). clangd alone won't do this.
+- **No-build mode** — when there's no `compile_commands.json` and no build system, `ccq init` writes a `compile_flags.txt` (auto-discovered `-I` include dirs). clangd then resolves **cross-file** (with ccq's file priming) **without a build** — cbm-style breadth, at lower accuracy (`#ifdef` over-included, no `-D`). Accuracy ladder: compile_commands.json > compile_flags.txt > same-file.
+- **Macros** — clangd indexes `#define`s; they appear in `ccq search` (kind `macro`) and `ccq macro` expands them.
 
 ## Install
 
@@ -98,7 +104,7 @@ ccq (Go) ── LSP (JSON-RPC/stdio) ──► clangd ──► compile_commands
 - The first query in a cold repo waits for clangd to index (seconds); clangd caches the index on disk, so later queries are fast.
 
 ## Status
-v0.2 — navigation (search/def/refs/callers/callees/impact/explore/symbols/macro), fnptr heuristic, `rename` editing, and a **warm-clangd daemon** are working. The first query in a repo spawns the daemon (indexes once); subsequent queries are **sub-second** (e.g. redis `callers` 0.6s, `explore` 0.07s warm vs ~30s cold). `ccq status` / `ccq shutdown` manage it; `--no-daemon` runs inline. Roadmap: `replace-body`/`insert` edits, git-diff incremental, graph export.
+v0.3 — navigation, **upgraded fn-pointer dispatch** (struct-keyed + positional tables + field←field, no cross-bleed), **no-build mode** (compile_flags.txt), **macro search**, **graph export** (json/sql), `rename` editing, and a **warm-clangd daemon** (sub-second repeated queries). Roadmap: `replace-body`/`insert` edits, git-diff incremental indexing.
 
 ## License
 MIT. Reuses architecture ideas validated by `troberti/clangd-query` (MIT), `mpsm/mcp-cpp`, and `2015xli/clangd-graph-rag`.

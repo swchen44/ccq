@@ -17,6 +17,8 @@ description: Use when navigating, understanding, or refactoring a C/C++ codebase
 - "Outline this file" → `ccq symbols <file>`
 - "What does this macro expand to / this signature?" → `ccq macro X`
 - "Rename `X` to `Y` safely across the project" → `ccq rename X Y --apply`
+- "Dump the call graph so I can query it with SQL" → `ccq export --format sql | sqlite3 g.db`
+- "Find this macro" → `ccq search <MACRO>` (macros are indexed; kind shows `macro`)
 
 ## First time in a repo
 Run `ccq init` once — it locates or generates `compile_commands.json` (CMake/Meson/bear) and warms clangd. Without it, ccq runs in degraded (same-file) mode.
