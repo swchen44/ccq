@@ -473,24 +473,69 @@ func (c *Ctx) Rename(name, newName string, apply bool) {
 	}
 }
 
-// symbolRange returns the full source range of the named symbol in its file.
+// symbolRange returns the full source range of the named symbol's *definition*
+// (the .c body, not a header declaration).
+func isSourceFile(p string) bool {
+	switch strings.ToLower(p[strings.LastIndex(p, ".")+1:]) {
+	case "c", "cc", "cpp", "cxx", "m", "mm":
+		return true
+	}
+	return false
+}
+
+// symbolRange returns the full source range of the named symbol's *definition*
+// (a body in a .c, not a header prototype). It gathers every file that defines
+// or declares the symbol, then picks the source-file body with the widest range.
 func (c *Ctx) symbolRange(name string) (file string, rng lsp.Range, ok bool) {
-	f, _, found := c.resolveSymbol(name)
-	if !found {
-		return "", lsp.Range{}, false
-	}
-	res, _ := c.Client.DocumentSymbol(f)
-	var syms []struct {
-		Name  string    `json:"name"`
-		Range lsp.Range `json:"range"`
-	}
-	json.Unmarshal(res, &syms)
+	files := map[string]bool{}
+	syms, _ := c.Client.WorkspaceSymbol(name)
 	for _, s := range syms {
 		if s.Name == name {
-			return f, s.Range, true
+			files[lsp.URIToPath(s.Location.URI)] = true
 		}
 	}
-	return "", lsp.Range{}, false
+	if f, pos, found := c.resolveSymbol(name); found {
+		files[f] = true
+		if locs, _ := c.Client.Definition(f, pos); len(locs) > 0 {
+			files[lsp.URIToPath(locs[0].URI)] = true
+		}
+	}
+	bestScore := -1
+	for fl := range files {
+		res, _ := c.Client.DocumentSymbol(fl)
+		// clangd returns flat SymbolInformation[]: the range lives in location.range.
+		var ds []struct {
+			Name     string       `json:"name"`
+			Location lsp.Location `json:"location"`
+		}
+		json.Unmarshal(res, &ds)
+		for _, s := range ds {
+			if s.Name != name {
+				continue
+			}
+			r := s.Location.Range
+			// source files (definitions) beat headers; wider span breaks ties.
+			score := (r.End.Line - r.Start.Line)
+			if isSourceFile(fl) {
+				score += 1000
+			}
+			if score > bestScore {
+				bestScore, file, rng, ok = score, fl, r, true
+			}
+		}
+	}
+	if os.Getenv("CCQ_DEBUG") != "" {
+		fmt.Fprintf(os.Stderr, "[debug] symbolRange %s: files=%v -> %s %v\n", name, keysOf(files), file, rng)
+	}
+	return file, rng, ok
+}
+
+func keysOf(m map[string]bool) []string {
+	var k []string
+	for s := range m {
+		k = append(k, s)
+	}
+	return k
 }
 
 // ReplaceBody replaces the named symbol's whole definition with newFile's content.

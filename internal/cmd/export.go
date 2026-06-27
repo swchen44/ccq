@@ -41,11 +41,11 @@ func (c *Ctx) Export(format, outPath string) {
 		if err != nil || res == nil {
 			continue
 		}
+		// clangd returns flat SymbolInformation[]: the range lives in location.range.
 		var syms []struct {
-			Name           string    `json:"name"`
-			Kind           int       `json:"kind"`
-			Range          lsp.Range `json:"range"`
-			SelectionRange lsp.Range `json:"selectionRange"`
+			Name     string       `json:"name"`
+			Kind     int          `json:"kind"`
+			Location lsp.Location `json:"location"`
 		}
 		json.Unmarshal(res, &syms)
 		for _, s := range syms {
@@ -54,10 +54,16 @@ func (c *Ctx) Export(format, outPath string) {
 				continue
 			}
 			seenNode[key] = true
-			nodes = append(nodes, exNode{s.Name, kindName(s.Kind), f, s.Range.Start.Line + 1})
+			line := s.Location.Range.Start.Line
+			nodes = append(nodes, exNode{s.Name, kindName(s.Kind), f, line + 1})
 			if isFuncKind(s.Kind) {
 				funcFiles[s.Name] = f
-				funcPos[s.Name] = s.SelectionRange.Start
+				// position the cursor on the name for call hierarchy.
+				pos := s.Location.Range.Start
+				if col := nameColumn(f, line, s.Name); col >= 0 {
+					pos.Character = col
+				}
+				funcPos[s.Name] = pos
 			}
 		}
 	}

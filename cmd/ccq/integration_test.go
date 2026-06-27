@@ -65,7 +65,9 @@ func TestCCQReplaceBodyEndToEnd(t *testing.T) {
 	os.WriteFile(filepath.Join(proj, "lib.c"), []byte(src), 0o644)
 	db := `[{"directory":"` + proj + `","command":"clang -c lib.c","file":"` + filepath.Join(proj, "lib.c") + `"}]`
 	os.WriteFile(filepath.Join(proj, "compile_commands.json"), []byte(db), 0o644)
-	newBody := filepath.Join(proj, "new.c")
+	// the replacement content lives OUTSIDE the project (and not as a .c) so clangd
+	// doesn't index it as a second definition of add.
+	newBody := filepath.Join(t.TempDir(), "new.txt")
 	os.WriteFile(newBody, []byte("int add(int a, int b){ return a + b + 1; }"), 0o644)
 
 	bin := filepath.Join(t.TempDir(), "ccq")
