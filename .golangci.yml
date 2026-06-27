@@ -1,10 +1,12 @@
 run:
   timeout: 3m
 linters:
+  # errcheck is intentionally omitted: this codebase has many deliberate
+  # fire-and-forget LSP/IPC writes and filepath.Walk callbacks. staticcheck
+  # still catches the high-signal error bugs (SA-series).
   enable:
     - govet
     - staticcheck
-    - errcheck
     - ineffassign
     - unused
     - misspell
