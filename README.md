@@ -124,6 +124,12 @@ curl -fsSL -O https://github.com/swchen44/ccq/releases/download/v0.3.0/ccq-linux
 tar xzf ccq-linux-amd64.tar.gz && cd ccq-linux-amd64 && ./install.sh
 ```
 
+**Self-contained release (bundle clangd)** — make recipients need *nothing*:
+```bash
+./build-release.sh v0.3.0 --bundle-clangd     # CLANGD_VER=18.1.3 to override
+```
+Downloads a matching `clangd` (from `clangd/clangd` releases) into each archive next to `ccq`. ccq auto-uses a `clangd` sitting beside its own binary, and `install.sh` places both on PATH. (Adds ~100–350 MB per archive; `linux/arm64` has no prebuilt clangd from that source and is skipped — those users install clangd themselves.)
+
 **Option C — intranet / air-gapped**
 Build once (`go build -o ccq ./cmd/ccq`, no network needed), copy the single binary + `SKILL.md` + a platform `clangd` binary onto the target machine, put both on PATH, and point ccq at clangd with `--clangd` if needed.
 

@@ -231,6 +231,16 @@ func resolveClangd(bin string) string {
 	if bin != "" {
 		return bin
 	}
+	// Prefer a clangd bundled next to the ccq binary (release --bundle-clangd).
+	if exe, err := os.Executable(); err == nil {
+		dir := filepath.Dir(exe)
+		for _, name := range []string{"clangd", "clangd.exe"} {
+			p := filepath.Join(dir, name)
+			if fi, err := os.Stat(p); err == nil && !fi.IsDir() {
+				return p
+			}
+		}
+	}
 	if p, err := exec.LookPath("clangd"); err == nil {
 		return p
 	}
