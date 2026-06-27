@@ -1,0 +1,5 @@
+/ccq
+/ccq.exe
+ccq-*-*
+*.test
+.cache/
