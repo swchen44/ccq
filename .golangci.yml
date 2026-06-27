@@ -1,13 +1,11 @@
 run:
   timeout: 3m
 linters:
-  # errcheck is intentionally omitted: this codebase has many deliberate
-  # fire-and-forget LSP/IPC writes and filepath.Walk callbacks. staticcheck
-  # still catches the high-signal error bugs (SA-series).
+  # errcheck is a v1 default; disable it — this codebase has many deliberate
+  # fire-and-forget LSP/IPC writes and filepath.Walk callbacks. The remaining
+  # defaults (govet, staticcheck, ineffassign, unused) plus gofmt/misspell stay.
+  disable:
+    - errcheck
   enable:
-    - govet
-    - staticcheck
-    - ineffassign
-    - unused
-    - misspell
     - gofmt
+    - misspell
