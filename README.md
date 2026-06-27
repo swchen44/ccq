@@ -1,3 +1,6 @@
+<!-- LANG-BAR -->
+**English** · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md)
+
 # ccq — clangd-powered C/C++ code intelligence CLI for AI agents
 
 `ccq` is a single-binary CLI that gives AI coding agents (Claude Code, Codex, OpenCode) and humans **compiler-accurate, token-efficient** navigation and refactoring of C/C++ codebases — by driving **clangd** under the hood and adding the few things clangd alone won't do.
@@ -103,6 +106,27 @@ ccq (Go) ── LSP (JSON-RPC/stdio) ──► clangd ──► compile_commands
 - `ccq init` finds `compile_commands.json` (or generates it via CMake/Meson/bear). With it, clangd is compiler-accurate; without it, clangd runs in degraded same-file mode (ccq warns).
 - The first query in a cold repo waits for clangd to index (seconds); clangd caches the index on disk, so later queries are fast.
 
+## Benchmark
+
+ccq's design comes from a head-to-head benchmark of C code-intelligence tools (full harness:
+[`swchen44/cbm-vs-codegraph-bench`](https://github.com/swchen44/cbm-vs-codegraph-bench);
+methodology: [docs/benchmark.md](docs/benchmark.md)).
+
+| Dimension | cbm | CodeGraph | clangd | Serena | **ccq** |
+|-----------|-----|-----------|--------|--------|---------|
+| Function-level call graph | ❌ file-level | ✅ | ✅ | ✅ | ✅ |
+| fn-pointer dispatch (F6) | ❌ | ✅ | ⚠️ | ⚠️ | ✅ |
+| 8 hard-C features passed | 2 | 3 | 7 | 7 | **8 (only one)** |
+| redis `lookupCommand` callers | 0 | 13 | 13 | 13 | **13** |
+| Warm repeated query | per-run | per-run | — | per-run | **~0.07–0.6s** |
+| Symbol rename (editing) | ❌ | ❌ | — | ✅ | ✅ |
+| Dependency footprint | self-build | ~188 MB | binary | ~890 pkgs | **single Go binary, 0 deps** |
+
+**Summary:** ccq is the only tool passing all 8 hard-C features — it keeps clangd's wins
+(`#ifdef`, macros, `typedef`, `_Generic`, function-level call graph) and adds the fn-pointer
+heuristic (the one feature CodeGraph beats clangd on), a warm daemon for speed, and stays a
+zero-dependency single binary.
+
 ## Release / distribution (giving ccq to others)
 
 ccq is a single static binary per platform — distribution is just "ship the binary + SKILL.md". Recipients also need `clangd` (or pass `--clangd <path>`).
@@ -139,8 +163,74 @@ Build once (`go build -o ccq ./cmd/ccq`, no network needed), copy the single bin
 3. Ensure `clangd` is installed (or `ccq --clangd /path/to/clangd ...`).
 4. In a C/C++ repo: `ccq init` then `ccq explore main`.
 
-## Status
-v0.3 — navigation, **upgraded fn-pointer dispatch** (struct-keyed + positional tables + field←field, no cross-bleed), **no-build mode** (compile_flags.txt), **macro search**, **graph export** (json/sql), `rename` editing, and a **warm-clangd daemon** (sub-second repeated queries). Roadmap: `replace-body`/`insert` edits, git-diff incremental indexing.
+## For Developers
+
+> Full design & requirements: [docs/design.md](docs/design.md) ·
+> [docs/requirement.md](docs/requirement.md) · [docs/benchmark.md](docs/benchmark.md)
+
+### Setup & build
+```bash
+git clone https://github.com/swchen44/ccq && cd ccq
+go build -o ccq ./cmd/ccq        # zero third-party deps; `go list -m all` = just this module
+```
+Requires Go 1.23+. No external Go modules → `go build` works fully offline.
+
+### Project layout
+```
+cmd/ccq/          CLI entry, flag parsing, daemon-or-inline routing (+ integration tests)
+internal/lsp/     LSP client driving clangd (JSON-RPC/stdio) + path/snippet helpers
+internal/cmd/     subcommands (navigate / edit / export) on an lsp.Client
+internal/fnptr/   function-pointer dispatch heuristic (pure text; the F6 differentiator)
+internal/compdb/  locate/generate compile_commands.json or compile_flags.txt (no-build)
+internal/daemon/  warm-clangd daemon + cross-platform IPC
+docs/             design / requirement / benchmark
+.github/workflows ci.yml (test+lint+build) · release.yml (tags) · nightly.yml (cron)
+```
+
+### Test & lint
+```bash
+make test              # unit tests (no clangd needed)
+make test-integration  # end-to-end via real clangd (auto-skips if clangd absent)
+make lint              # go vet + golangci-lint (if installed)
+make fmt               # gofmt -w .
+```
+- **Unit tests** are zero-dependency (stdlib `testing`): `internal/fnptr` (cross-bleed /
+  positional / field←field), `internal/compdb`, `internal/lsp`, `internal/cmd`.
+- **Integration tests** are gated by `//go:build integration` and skip when `clangd` is not on
+  PATH.
+- CI (`.github/workflows/ci.yml`) runs gofmt check, `go vet`, golangci-lint, unit tests,
+  integration tests (installs clangd), and cross-compiles all platforms on every push/PR.
+
+### Release process & versions
+- **Stable**: `git tag vX.Y.Z && git push origin vX.Y.Z` → `release.yml` builds all platforms
+  and publishes a GitHub Release (SemVer; see `CHANGELOG.md`).
+- **Nightly**: `nightly.yml` runs every night (18:00 UTC) and refreshes a rolling `nightly`
+  prerelease with the latest `main` binaries for every platform. Manual: run the *nightly*
+  workflow via "Run workflow".
+- Local all-platform build: `make release` (`./build-release.sh`), add `--bundle-clangd` to
+  embed clangd.
+
+### Contributing
+Keep it zero-dependency (stdlib only), `gofmt`-clean, and `go vet` / golangci-lint green; add a
+unit test for new logic (and an integration test if it touches the clangd path).
+
+## Version history
+
+| Version | Date | Highlights |
+|---------|------|-----------|
+| [0.3.0](https://github.com/swchen44/ccq/releases/tag/v0.3.0) | 2026-06-27 | fn-pointer upgrade (struct-keyed, positional, field←field), no-build mode, macro search, graph export |
+| [0.2.0](https://github.com/swchen44/ccq/releases/tag/v0.2.0) | 2026-06-26 | warm-clangd daemon (sub-second warm queries) |
+| [0.1.0](https://github.com/swchen44/ccq/releases/tag/v0.1.0) | 2026-06-26 | initial release: navigation + rename + fnptr heuristic |
+
+Full notes: [CHANGELOG.md](CHANGELOG.md). Latest binaries: [Releases](https://github.com/swchen44/ccq/releases) (stable) · [nightly](https://github.com/swchen44/ccq/releases/tag/nightly).
+
+## Roadmap / TODO
+
+- [ ] `callees` via function-body scan (clangd's `outgoingCalls` is unreliable; build from the body)
+- [ ] More editing: `replace-body`, `insert-before/after` (Serena parity)
+- [ ] git-diff incremental re-index for very large repos
+- [ ] More build systems (Bazel, xmake) for `ccq init`
+- [ ] fn-pointer heuristic: positional-table edge cases, comment-aware multi-line registrations
 
 ## License
 MIT. Reuses architecture ideas validated by `troberti/clangd-query` (MIT), `mpsm/mcp-cpp`, and `2015xli/clangd-graph-rag`.

@@ -1,0 +1,140 @@
+# ccq — Design
+
+This document describes ccq's architecture, modules, data flow, sequences, and protocols.
+
+## 1. Architecture overview
+
+ccq is a thin, fast layer over **clangd**: it speaks LSP to clangd for compiler-accurate
+answers, adds a text-based **function-pointer heuristic** that clangd won't do, keeps clangd
+**warm** in a daemon, and renders **token-efficient** output for AI agents.
+
+```mermaid
+flowchart TB
+    subgraph User["Agent / Human"]
+        CLI["ccq CLI"]
+    end
+    subgraph CCQ["ccq (single Go binary)"]
+        MAIN["cmd/ccq (flags, dispatch)"]
+        DAEMON["daemon (warm clangd, IPC)"]
+        CMD["cmd (commands: callers/explore/rename/export...)"]
+        LSPC["lsp (LSP client)"]
+        FN["fnptr (dispatch heuristic, text)"]
+        CDB["compdb (compile_commands / compile_flags)"]
+    end
+    CLANGD["clangd (external)"]
+    CC[("compile_commands.json / compile_flags.txt")]
+    CODE[("C/C++ source")]
+
+    CLI --> MAIN --> DAEMON --> CMD
+    MAIN -. "--no-daemon" .-> CMD
+    CMD --> LSPC --> CLANGD
+    CMD --> FN --> CODE
+    CDB --> CLANGD
+    CLANGD --> CC
+    CLANGD --> CODE
+```
+
+## 2. Module responsibilities
+
+| Module | File(s) | Responsibility |
+|--------|---------|----------------|
+| CLI / dispatch | `cmd/ccq/main.go` | parse flags, resolve clangd, route to daemon or inline, subcommands |
+| daemon | `internal/daemon/*.go` | keep one clangd warm per project; IPC (Unix socket / TCP); idle shutdown; spawn-on-demand |
+| commands | `internal/cmd/run.go`, `edit.go`, `export.go` | implement each subcommand on an `lsp.Client`; output to an `io.Writer` |
+| LSP client | `internal/lsp/client.go`, `util.go` | drive clangd over JSON-RPC/stdio: symbols, definition, references, call hierarchy, hover, rename |
+| fnptr heuristic | `internal/fnptr/fnptr.go` | resolve `obj->fn()` dispatch to handlers by parsing ops-struct registrations (text only) |
+| compile DB | `internal/compdb/compdb.go` | locate/generate `compile_commands.json`, or no-build `compile_flags.txt` |
+
+## 3. Data flow — answering "who calls X"
+
+```mermaid
+flowchart LR
+    Q["ccq callers X"] --> R["resolveSymbol(X)\nworkspace/symbol → file+pos"]
+    R --> P["prepareCallHierarchy(file,pos)"]
+    P --> IC["incomingCalls → function-level callers"]
+    Q --> H["fnptr.Callers(root, X)\n(struct,field) dispatch heuristic"]
+    IC --> M["merge + dedup"]
+    H --> M
+    M --> O["token-efficient output / --json"]
+```
+
+## 4. Sequence — first (cold) query spawns the daemon
+
+```mermaid
+sequenceDiagram
+    participant U as user
+    participant C as ccq (CLI)
+    participant D as ccq daemon
+    participant L as clangd
+    U->>C: ccq callers add
+    C->>D: connect (per-project socket)
+    Note over C,D: no daemon yet → spawn detached `ccq __daemon`
+    D->>L: start clangd (--compile-commands-dir, --background-index)
+    D->>L: didOpen all source files (prime index)
+    D->>L: wait for $/progress index end (or baseline)
+    C->>D: request {cmd:callers, args:[add]}
+    D->>L: prepareCallHierarchy + incomingCalls
+    L-->>D: callers
+    D-->>C: text output
+    C-->>U: callers of add: ...
+```
+
+Subsequent (warm) queries skip the spawn/index and return in well under a second:
+
+```mermaid
+sequenceDiagram
+    participant C as ccq (CLI)
+    participant D as ccq daemon (warm)
+    participant L as clangd (warm)
+    C->>D: request {cmd:explore, args:[X]}
+    D->>L: prepareCallHierarchy + incoming/outgoing + hover
+    L-->>D: results
+    D-->>C: source + callers + callees + blast-radius
+```
+
+## 5. Sequence — function-pointer heuristic (no clangd)
+
+```mermaid
+sequenceDiagram
+    participant F as fnptr.Callers(root, handler)
+    participant S as source files (text)
+    F->>S: Pass A: scan fn-pointer typedefs + function defs
+    F->>S: Pass B: struct layouts (mark fn-pointer fields)
+    F->>S: Pass C: registrations (.field=fn / positional {"n",fn})
+    F->>S: Pass D: field←field propagation (a->f = b->g), 3x to converge
+    F->>S: Pass E: dispatch sites recv->field() → enclosing function
+    Note over F: keyed by (struct,field); FANOUT_CAP; real-function gate
+    F-->>F: dispatcher→handler edges (heuristic)
+```
+
+## 6. Protocols
+
+### LSP methods used (ccq → clangd, JSON-RPC over stdio)
+| Need | LSP method |
+|------|-----------|
+| find symbols | `workspace/symbol` |
+| definition | `textDocument/definition` |
+| references | `textDocument/references` |
+| who calls | `textDocument/prepareCallHierarchy` → `callHierarchy/incomingCalls` |
+| what it calls | `callHierarchy/outgoingCalls` (clangd-limited; export uses incoming instead) |
+| file outline | `textDocument/documentSymbol` |
+| macro / signature | `textDocument/hover` |
+| rename | `textDocument/rename` |
+| index readiness | `$/progress` (window/workDoneProgress) |
+
+### Compile database & accuracy ladder
+| Config | How clangd behaves | Accuracy |
+|--------|-------------------|----------|
+| `compile_commands.json` | full background index, real flags + `-D` | highest (correct `#ifdef`, includes) |
+| `compile_flags.txt` (no-build) | flat flags, no background index; ccq primes via OpenAll | cross-file works; `#ifdef` over-included, no `-D` |
+| none | `clang foo.c` guess | same-file only |
+
+## 7. Key implementation notes (gotchas)
+
+- `CallHierarchyItem.Data` (clangd's opaque payload) **must be round-tripped** or
+  incoming/outgoing calls silently return nothing.
+- clangd's `workspace/symbol` only returns symbols from **opened** files on a cold project →
+  ccq opens all source files at startup (`OpenAll`).
+- The call-hierarchy cursor must sit on the **symbol name**, not the line start; ccq adjusts
+  the column via `nameColumn`.
+- clangd's `outgoingCalls` is unreliable; `export` builds the call graph from `incomingCalls`.
