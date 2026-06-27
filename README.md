@@ -14,6 +14,19 @@ ccq impact ssl_init -d 3        # transitive blast radius
 ccq rename old_name new_name --apply   # safe symbol-level rename across the repo
 ```
 
+## Motivation
+
+AI coding agents understand C/C++ by spraying `grep` and `Read` — many tool calls, a lot of
+tokens, and a call graph that text search fundamentally can't see (function pointers, macros,
+`#ifdef`). A head-to-head benchmark ([`cbm-vs-codegraph-bench`](https://github.com/swchen44/cbm-vs-codegraph-bench))
+found the most accurate engine for C is plain **clangd + `compile_commands.json`** — it wins
+call graph, `#ifdef`, macros, `typedef`, `_Generic` — but it isn't packaged for agents, it's
+slow to restart, and it won't resolve runtime function-pointer dispatch.
+
+**ccq exists to package that winning engine for agents:** one token-cheap command per question,
+a warm daemon for speed, a function-pointer heuristic for the one thing clangd misses,
+symbol-level editing, and a zero-dependency single binary that drops onto a locked-down intranet.
+
 ## Why ccq (the pain points it solves)
 
 | Tool it targets | Their pain point | How ccq solves it |
@@ -127,6 +140,29 @@ methodology: [docs/benchmark.md](docs/benchmark.md)).
 heuristic (the one feature CodeGraph beats clangd on), a warm daemon for speed, and stays a
 zero-dependency single binary.
 
+## Limitations
+
+ccq is deliberately a thin layer over clangd; it inherits clangd's strengths and a few honest limits.
+
+- **Function-pointer heuristic (`fnptr`)** — text-based and intentionally *over-approximating*:
+  it links a dispatcher to **all** handlers registered to that `(struct, field)` (candidates, not
+  the single runtime target). It does **not** resolve: callbacks passed as arguments then invoked
+  elsewhere (`eloop_register_timeout(cb, …)` → later `e->cb()`), indirect receivers `(*p)->fn()`,
+  array-indexed dispatch `arr[i]->fn()`, return-value dispatch `get_fn()()`, or fn-pointers stored
+  in plain (non-struct) variables. Positional tables and multi-line registrations are best-effort.
+- **Callees** — clangd's `outgoingCalls` is unreliable, so `callees` (and the callees half of
+  `explore`) can under-report. `callers`/`impact`/`export` use the solid `incomingCalls` path.
+  (Roadmap: build callees from a function-body scan.)
+- **Callback / event dispatch** — "register now, call later" flows (eloop/timer/signal) aren't
+  resolved — a blind spot shared by all static tools (cscope, clangd included).
+- **No-build mode accuracy** — `compile_flags.txt` gives cross-file reach without a build, but with
+  guessed includes and no `-D`: `#ifdef` branches are over-included and macro-dependent code may be
+  wrong. Use a real `compile_commands.json` for config-accurate results.
+- **Cold start & scale** — the first query spawns the daemon and indexes the repo (~30s on redis);
+  clangd's index uses RAM proportional to repo size. Warm queries are sub-second.
+- **Dependencies / scope** — needs a `clangd` binary (the engine) and, for best accuracy, a compile
+  database. **C/C++ only** by design (cross-language breadth is what tree-sitter tools like cbm are for).
+
 ## Release / distribution (giving ccq to others)
 
 ccq is a single static binary per platform — distribution is just "ship the binary + SKILL.md". Recipients also need `clangd` (or pass `--clangd <path>`).
@@ -218,9 +254,9 @@ unit test for new logic (and an integration test if it touches the clangd path).
 
 | Version | Date | Highlights |
 |---------|------|-----------|
-| [0.3.0](https://github.com/swchen44/ccq/releases/tag/v0.3.0) | 2026-06-27 | fn-pointer upgrade (struct-keyed, positional, field←field), no-build mode, macro search, graph export |
-| [0.2.0](https://github.com/swchen44/ccq/releases/tag/v0.2.0) | 2026-06-26 | warm-clangd daemon (sub-second warm queries) |
-| [0.1.0](https://github.com/swchen44/ccq/releases/tag/v0.1.0) | 2026-06-26 | initial release: navigation + rename + fnptr heuristic |
+| [**0.3.0**](https://github.com/swchen44/ccq/releases/tag/v0.3.0) (first public release) | 2026-06-27 | fn-pointer upgrade (struct-keyed, positional, field←field), no-build mode, macro search, graph export |
+| 0.2.0 (milestone) | 2026-06-26 | warm-clangd daemon (sub-second warm queries) |
+| 0.1.0 (milestone) | 2026-06-26 | navigation + rename + fnptr heuristic |
 
 Full notes: [CHANGELOG.md](CHANGELOG.md). Latest binaries: [Releases](https://github.com/swchen44/ccq/releases) (stable) · [nightly](https://github.com/swchen44/ccq/releases/tag/nightly).
 

@@ -3,11 +3,7 @@
 All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
-- Tests (unit + integration), golangci-lint, Makefile, CI & nightly workflows.
-- Developer handbook, design/requirement/benchmark docs, multi-language READMEs.
-
-## [0.3.0] — 2026-06-27
+## [0.3.0] — 2026-06-27 — first public release
 ### Added
 - **fn-pointer dispatch (upgraded)** — keyed by `(struct type, field)` so same-named
   fields in different structs no longer cross-bleed; handles positional tables
@@ -17,6 +13,8 @@ All notable changes to ccq are documented here. Format follows
 - **Macro search** — `#define`s appear in `ccq search` (kind `macro`).
 - **Graph export** — `ccq export --format json|sql`; pipe SQL to `sqlite3` and query
   with plain SQL (zero-dependency substitute for a query language).
+- **Quality & docs** — unit + integration tests, golangci-lint, Makefile, CI/nightly/release
+  workflows; design/requirement/benchmark docs; multi-language READMEs (en/zh-TW/zh-CN).
 
 ## [0.2.0] — 2026-06-26
 ### Added

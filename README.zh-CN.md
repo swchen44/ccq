@@ -14,6 +14,12 @@ ccq impact ssl_init -d 3        # 传递影响范围
 ccq rename old_name new_name --apply   # 跨项目安全的符号级改名
 ```
 
+## 动机
+
+AI 编码代理理解 C/C++ 的方式是猛刷 `grep` 与 `Read` —— 大量工具调用、烧很多 token，而且文本搜索从根本看不到调用图（函数指针、宏、`#ifdef`）。一场对打 benchmark（[`cbm-vs-codegraph-bench`](https://github.com/swchen44/cbm-vs-codegraph-bench)）发现，C 最准的引擎其实就是 **clangd + `compile_commands.json`** —— 它在调用图、`#ifdef`、宏、`typedef`、`_Generic` 都赢 —— 但它没有为 agent 打包、重启很慢、也不解析 runtime 的函数指针分派。
+
+**ccq 的存在就是把这个赢家引擎打包给 agent：** 每个问题一个 token 便宜的命令、warm daemon 给速度、fnptr 启发式补 clangd 唯一缺的、符号级编辑，以及一个能丢进锁定内网的零依赖单一 binary。
+
 ## 为什么用 ccq（解决的痛点）
 
 | 对标工具 | 它的痛点 | ccq 怎么解 |
@@ -109,6 +115,17 @@ ccq 的设计来自一场 C 代码智能工具的对打 benchmark（完整 harne
 
 **结论：** ccq 是唯一通过全部 8 项难 C 特性的工具 —— 保留 clangd 的赢面（`#ifdef`、宏、`typedef`、`_Generic`、函数级调用图），再加上 fnptr 启发式（CodeGraph 唯一胜 clangd 的特性）、warm daemon 的速度，并维持零依赖单一 binary。
 
+## 限制（Limitations）
+
+ccq 刻意只是 clangd 之上的薄层；它继承 clangd 的强项，也有几个诚实的限制。
+
+- **函数指针启发式（`fnptr`）** — 纯文本、刻意*过度近似*：它把一个 dispatcher 连到该 `(struct, 字段)` 注册过的**所有** handler（是候选集，不是运行期单一目标）。它**不**解析：当作参数传递后在他处被调用的 callback（`eloop_register_timeout(cb, …)` → 之后 `e->cb()`）、间接接收者 `(*p)->fn()`、数组索引分派 `arr[i]->fn()`、返回值分派 `get_fn()()`、或存在普通（非 struct）变量里的函数指针。positional table 与多行注册为尽力而为。
+- **callees** — clangd 的 `outgoingCalls` 不可靠，所以 `callees`（与 `explore` 的 callees 部分）可能少报。`callers`/`impact`/`export` 走可靠的 `incomingCalls`。（Roadmap：改用函数体扫描建 callees。）
+- **callback / 事件分派** — 「先注册、之后调用」流程（eloop/timer/signal）不被解析 —— 这是所有静态工具（含 cscope、clangd）的共同盲区。
+- **无 build 模式精度** — `compile_flags.txt` 让你不用 build 也能跨文件，但用猜的 include 且无 `-D`：`#ifdef` 分支会过度涵盖、依赖宏的代码可能错。要 config 精准请用真的 `compile_commands.json`。
+- **冷启动与规模** — 第一次查询会启动 daemon 并索引整个 repo（redis 约 ~30s）；clangd 索引也吃与 repo 大小成正比的内存。热查询则亚秒。
+- **依赖 / 范围** — 需要 `clangd` binary（引擎），且为了最佳精度需要 compile database。**仅 C/C++**（跨语言广度是 cbm 这类 tree-sitter 工具的领域）。
+
 ## 发布 / 分发（给别人用）
 
 ccq 每平台都是单一静态 binary —— 分发就是「给 binary + SKILL.md」。对方另需 `clangd`（或 `--clangd <path>`）。
@@ -185,9 +202,9 @@ make fmt               # gofmt -w .
 
 | 版本 | 日期 | 重点 |
 |------|------|------|
-| [0.3.0](https://github.com/swchen44/ccq/releases/tag/v0.3.0) | 2026-06-27 | fnptr 升级（复合键、positional、field←field）、no-build 模式、宏搜索、graph export |
-| [0.2.0](https://github.com/swchen44/ccq/releases/tag/v0.2.0) | 2026-06-26 | warm-clangd daemon（亚秒热查询） |
-| [0.1.0](https://github.com/swchen44/ccq/releases/tag/v0.1.0) | 2026-06-26 | 首发：导航 + rename + fnptr 启发式 |
+| [**0.3.0**](https://github.com/swchen44/ccq/releases/tag/v0.3.0)（首个公开版） | 2026-06-27 | fnptr 升级（复合键、positional、field←field）、no-build 模式、宏搜索、graph export |
+| 0.2.0（里程碑） | 2026-06-26 | warm-clangd daemon（亚秒热查询） |
+| 0.1.0（里程碑） | 2026-06-26 | 导航 + rename + fnptr 启发式 |
 
 完整记录：[CHANGELOG.md](CHANGELOG.md)。最新 binary：[Releases](https://github.com/swchen44/ccq/releases)（稳定）·[nightly](https://github.com/swchen44/ccq/releases/tag/nightly)。
 
