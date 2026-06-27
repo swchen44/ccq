@@ -2,6 +2,9 @@
 // Token-efficient navigation (callers/callees/explore/refs/symbols/macro) and
 // symbol-level editing (rename), with a function-pointer dispatch heuristic that
 // resolves what clangd alone won't. Zero Go dependencies; single static binary.
+//
+// A warm-clangd daemon keeps queries fast: the first query spawns it, later ones
+// reuse it. Use --no-daemon to run clangd inline.
 package main
 
 import (
@@ -13,6 +16,7 @@ import (
 
 	"github.com/swchen44/ccq/internal/cmd"
 	"github.com/swchen44/ccq/internal/compdb"
+	"github.com/swchen44/ccq/internal/daemon"
 	"github.com/swchen44/ccq/internal/lsp"
 )
 
@@ -35,7 +39,9 @@ EDIT (symbol-level, Serena-parity):
   rename <symbol> <new> [--apply]   safe workspace-wide rename (dry-run by default)
 
 PROJECT:
-  init                    detect/generate compile_commands.json + warm clangd
+  init                    detect/generate compile_commands.json
+  status                  is the warm daemon running?
+  shutdown                stop the warm daemon
   version
 
 FLAGS:
@@ -43,9 +49,16 @@ FLAGS:
   --json        machine-readable output
   --clangd <p>  clangd binary (default: clangd on PATH)
   -d <n>        depth for impact
+  --no-daemon   run clangd inline (no warm daemon)
 `
 
-const version = "ccq 0.1.0"
+const version = "ccq 0.2.0"
+
+var queryCmds = map[string]bool{
+	"search": true, "def": true, "show": true, "refs": true, "usages": true,
+	"callers": true, "callees": true, "impact": true, "explore": true,
+	"symbols": true, "macro": true, "rename": true,
+}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -53,7 +66,10 @@ func main() {
 		os.Exit(1)
 	}
 	sub := os.Args[1]
-	args, root, jsonOut, clangdBin, depth := parseFlags(os.Args[2:])
+	args, root, jsonOut, clangdBin, depth, noDaemon := parseFlags(os.Args[2:])
+	root = absOr(root)
+	clangdBin = resolveClangd(clangdBin)
+	exe, _ := os.Executable()
 
 	switch sub {
 	case "version", "-v", "--version":
@@ -62,89 +78,85 @@ func main() {
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 		return
-	}
-
-	root = absOr(root)
-	clangdBin = resolveClangd(clangdBin)
-
-	if sub == "init" {
+	case "init":
 		dir, how, err := compdb.Ensure(root)
 		if err != nil {
 			fmt.Println("ERROR:", err)
 			os.Exit(1)
 		}
-		fmt.Printf("compile_commands.json: %s (%s)\n", dir, how)
-		fmt.Println("clangd:", clangdBin)
-		fmt.Println("ready. try: ccq explore <symbol>")
+		fmt.Printf("compile_commands.json: %s (%s)\nclangd: %s\nready. try: ccq explore <symbol>\n", dir, how, clangdBin)
+		return
+	case "status":
+		if out, err := daemon.Ping(root); err == nil {
+			fmt.Println("daemon: running", out)
+		} else {
+			fmt.Println("daemon: not running")
+		}
+		return
+	case "shutdown":
+		daemon.Shutdown(root)
+		fmt.Println("daemon: stopped")
+		return
+	case "__daemon": // internal: the warm server process
+		ccDir := compdb.Locate(root)
+		maxWait, baseline := cmd.IndexWaits(isBig(root))
+		if err := daemon.Serve(root, clangdBin, ccDir, 1200, maxWait, baseline); err != nil {
+			os.Exit(1)
+		}
 		return
 	}
 
-	// locate compile_commands (warn but continue in degraded mode if missing)
-	ccDir := compdb.Locate(root)
-	if ccDir == "" {
-		fmt.Fprintln(os.Stderr, "warning: no compile_commands.json found — clangd runs in degraded (same-file) mode. Run `ccq init` for full accuracy.")
+	if !queryCmds[sub] {
+		fmt.Printf("unknown command: %s\n\n%s", sub, usage)
+		os.Exit(1)
 	}
 
+	req := cmd.Request{Cmd: sub, Args: normalize(sub, args), JSON: jsonOut, Depth: depth, Apply: hasFlag("--apply")}
+
+	// Daemon path (default): fast warm clangd.
+	if !noDaemon {
+		out, err := daemon.Query(root, exe, clangdBin, req)
+		if err == nil {
+			fmt.Print(out)
+			return
+		}
+		fmt.Fprintln(os.Stderr, "warning: daemon unavailable ("+err.Error()+"), running inline")
+	}
+
+	// Inline path.
+	runInline(root, clangdBin, req)
+}
+
+func runInline(root, clangdBin string, req cmd.Request) {
+	ccDir := compdb.Locate(root)
+	if ccDir == "" {
+		fmt.Fprintln(os.Stderr, "warning: no compile_commands.json — degraded (same-file) mode. Run `ccq init`.")
+	}
 	client, err := lsp.Start(clangdBin, root, ccDir)
 	if err != nil {
 		fmt.Println("ERROR:", err)
 		os.Exit(1)
 	}
 	defer client.Close()
-	// Prime clangd's index by opening project source files (workspace/symbol and
-	// cross-file call hierarchy need this; the background static index alone is
-	// not reliably populated on a cold project).
 	client.OpenAll(root, 1200)
 	maxWait, baseline := cmd.IndexWaits(isBig(root))
 	client.WaitIndex(maxWait, baseline)
-
-	c := &cmd.Ctx{Client: client, Root: root, JSON: jsonOut}
-
-	need := func(n int) {
-		if len(args) < n {
-			fmt.Printf("usage: ccq %s ...\n", sub)
-			os.Exit(1)
-		}
-	}
-
-	switch sub {
-	case "search":
-		need(1)
-		c.Search(args[0])
-	case "def", "show":
-		need(1)
-		c.Def(args[0])
-	case "refs", "usages":
-		need(1)
-		c.Refs(args[0])
-	case "callers":
-		need(1)
-		c.Callers(args[0])
-	case "callees":
-		need(1)
-		c.Callees(args[0])
-	case "impact":
-		need(1)
-		c.Impact(args[0], depth)
-	case "explore":
-		need(1)
-		c.Explore(args[0])
-	case "symbols":
-		need(1)
-		c.Symbols(absOr(args[0]))
-	case "macro":
-		need(1)
-		c.Macro(args[0])
-	case "rename":
-		need(2)
-		c.Rename(args[0], args[1], hasFlag("--apply"))
-	default:
-		fmt.Printf("unknown command: %s\n\n%s", sub, usage)
+	c := &cmd.Ctx{Client: client, Root: root, Out: os.Stdout}
+	if !c.Dispatch(req) {
+		fmt.Printf("unknown command: %s\n", req.Cmd)
 		os.Exit(1)
 	}
 }
 
-func parseFlags(in []string) (args []string, root string, jsonOut bool, clangdBin string, depth int) {
+// normalize resolves file-path args (symbols command takes a file).
+func normalize(sub string, args []string) []string {
+	if sub == "symbols" && len(args) > 0 {
+		args[0] = absOr(args[0])
+	}
+	return args
+}
+
+func parseFlags(in []string) (args []string, root string, jsonOut bool, clangdBin string, depth int, noDaemon bool) {
 	depth = 3
 	for i := 0; i < len(in); i++ {
 		switch in[i] {
@@ -165,8 +177,9 @@ func parseFlags(in []string) (args []string, root string, jsonOut bool, clangdBi
 				depth, _ = strconv.Atoi(in[i+1])
 				i++
 			}
+		case "--no-daemon":
+			noDaemon = true
 		case "--apply":
-			// consumed by hasFlag
 		default:
 			args = append(args, in[i])
 		}
@@ -202,7 +215,6 @@ func resolveClangd(bin string) string {
 	return "clangd"
 }
 
-// isBig is a rough heuristic to give clangd more index time on large projects.
 func isBig(root string) bool {
 	n := 0
 	filepath.Walk(root, func(p string, info os.FileInfo, err error) error {

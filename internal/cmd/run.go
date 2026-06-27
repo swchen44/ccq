@@ -4,6 +4,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -18,6 +19,53 @@ type Ctx struct {
 	Client *lsp.Client
 	Root   string
 	JSON   bool
+	Out    io.Writer // where command output goes (stdout, or a daemon response buffer)
+}
+
+// Request is a command to run (used by direct mode and the daemon).
+type Request struct {
+	Cmd   string   `json:"cmd"`
+	Args  []string `json:"args"`
+	JSON  bool     `json:"json"`
+	Depth int      `json:"depth"`
+	Apply bool     `json:"apply"`
+}
+
+// Dispatch runs a single command. Output goes to c.Out. Returns false for an
+// unknown command.
+func (c *Ctx) Dispatch(r Request) bool {
+	c.JSON = r.JSON
+	a := func(i int) string {
+		if i < len(r.Args) {
+			return r.Args[i]
+		}
+		return ""
+	}
+	switch r.Cmd {
+	case "search":
+		c.Search(a(0))
+	case "def", "show":
+		c.Def(a(0))
+	case "refs", "usages":
+		c.Refs(a(0))
+	case "callers":
+		c.Callers(a(0))
+	case "callees":
+		c.Callees(a(0))
+	case "impact":
+		c.Impact(a(0), r.Depth)
+	case "explore":
+		c.Explore(a(0))
+	case "symbols":
+		c.Symbols(a(0))
+	case "macro":
+		c.Macro(a(0))
+	case "rename":
+		c.Rename(a(0), a(1), r.Apply)
+	default:
+		return false
+	}
+	return true
 }
 
 // resolveSymbol maps a bare symbol name to a definition location.
@@ -87,11 +135,11 @@ func isFuncKind(k int) bool { return k == 12 || k == 6 }
 func (c *Ctx) Search(query string) {
 	syms, _ := c.Client.WorkspaceSymbol(query)
 	if c.JSON {
-		emit(syms)
+		c.emit(syms)
 		return
 	}
 	for _, s := range syms {
-		fmt.Printf("%s\t%s:%d\t[%s]\n", s.Name, lsp.URIToPath(s.Location.URI),
+		fmt.Fprintf(c.Out, "%s\t%s:%d\t[%s]\n", s.Name, lsp.URIToPath(s.Location.URI),
 			s.Location.Range.Start.Line+1, kindName(s.Kind))
 	}
 }
@@ -100,17 +148,17 @@ func (c *Ctx) Search(query string) {
 func (c *Ctx) Def(name string) {
 	file, pos, ok := c.resolveSymbol(name)
 	if !ok {
-		fmt.Printf("symbol not found: %s\n", name)
+		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
 		return
 	}
 	locs, _ := c.Client.Definition(file, pos)
 	if len(locs) == 0 {
-		fmt.Printf("%s\t%s:%d\n", name, file, pos.Line+1)
+		fmt.Fprintf(c.Out, "%s\t%s:%d\n", name, file, pos.Line+1)
 		return
 	}
 	l := locs[0]
 	f := lsp.URIToPath(l.URI)
-	fmt.Printf("// %s:%d\n%s\n", f, l.Range.Start.Line+1,
+	fmt.Fprintf(c.Out, "// %s:%d\n%s\n", f, l.Range.Start.Line+1,
 		lsp.Snippet(f, l.Range.Start.Line, l.Range.End.Line))
 }
 
@@ -118,17 +166,17 @@ func (c *Ctx) Def(name string) {
 func (c *Ctx) Refs(name string) {
 	file, pos, ok := c.resolveSymbol(name)
 	if !ok {
-		fmt.Printf("symbol not found: %s\n", name)
+		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
 		return
 	}
 	locs, _ := c.Client.References(file, pos, false)
 	if c.JSON {
-		emit(locs)
+		c.emit(locs)
 		return
 	}
 	for _, l := range locs {
 		f := lsp.URIToPath(l.URI)
-		fmt.Printf("%s:%d\t%s\n", f, l.Range.Start.Line+1, lsp.LineText(f, l.Range.Start.Line))
+		fmt.Fprintf(c.Out, "%s:%d\t%s\n", f, l.Range.Start.Line+1, lsp.LineText(f, l.Range.Start.Line))
 	}
 }
 
@@ -159,18 +207,18 @@ func (c *Ctx) callerNames(name string) (real []string, heuristic []fnptr.Caller)
 func (c *Ctx) Callers(name string) {
 	real, heur := c.callerNames(name)
 	if c.JSON {
-		emit(map[string]any{"symbol": name, "callers": real, "fnptr_heuristic": heur})
+		c.emit(map[string]any{"symbol": name, "callers": real, "fnptr_heuristic": heur})
 		return
 	}
-	fmt.Printf("callers of %s:\n", name)
+	fmt.Fprintf(c.Out, "callers of %s:\n", name)
 	for _, r := range real {
-		fmt.Printf("  %s\n", r)
+		fmt.Fprintf(c.Out, "  %s\n", r)
 	}
 	for _, h := range heur {
-		fmt.Printf("  %s  (fnptr via .%s @ %s:%d)\n", h.Func, h.Field, h.File, h.Line)
+		fmt.Fprintf(c.Out, "  %s  (fnptr via .%s @ %s:%d)\n", h.Func, h.Field, h.File, h.Line)
 	}
 	if len(real)+len(heur) == 0 {
-		fmt.Println("  (none)")
+		fmt.Fprintln(c.Out, "  (none)")
 	}
 }
 
@@ -178,7 +226,7 @@ func (c *Ctx) Callers(name string) {
 func (c *Ctx) Callees(name string) {
 	file, pos, ok := c.resolveSymbol(name)
 	if !ok {
-		fmt.Printf("symbol not found: %s\n", name)
+		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
 		return
 	}
 	items, _ := c.Client.PrepareCallHierarchy(file, pos)
@@ -191,12 +239,12 @@ func (c *Ctx) Callees(name string) {
 	}
 	out = dedup(out)
 	if c.JSON {
-		emit(map[string]any{"symbol": name, "callees": out})
+		c.emit(map[string]any{"symbol": name, "callees": out})
 		return
 	}
-	fmt.Printf("callees of %s:\n", name)
+	fmt.Fprintf(c.Out, "callees of %s:\n", name)
 	for _, o := range out {
-		fmt.Printf("  %s\n", o)
+		fmt.Fprintf(c.Out, "  %s\n", o)
 	}
 }
 
@@ -228,12 +276,12 @@ func (c *Ctx) Impact(name string, depth int) {
 		frontier = next
 	}
 	if c.JSON {
-		emit(map[string]any{"symbol": name, "depth": depth, "impacted": order})
+		c.emit(map[string]any{"symbol": name, "depth": depth, "impacted": order})
 		return
 	}
-	fmt.Printf("impact radius of %s (depth %d): %d symbols\n", name, depth, len(order))
+	fmt.Fprintf(c.Out, "impact radius of %s (depth %d): %d symbols\n", name, depth, len(order))
 	for _, o := range order {
-		fmt.Printf("  %s\n", o)
+		fmt.Fprintf(c.Out, "  %s\n", o)
 	}
 }
 
@@ -241,7 +289,7 @@ func (c *Ctx) Impact(name string, depth int) {
 func (c *Ctx) Explore(name string) {
 	file, pos, ok := c.resolveSymbol(name)
 	if !ok {
-		fmt.Printf("symbol not found: %s\n", name)
+		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
 		return
 	}
 	locs, _ := c.Client.Definition(file, pos)
@@ -259,27 +307,27 @@ func (c *Ctx) Explore(name string) {
 		heurNames = append(heurNames, h.Func+" (fnptr)")
 	}
 	if c.JSON {
-		emit(map[string]any{"symbol": name, "callers": real, "fnptr_callers": heurNames,
+		c.emit(map[string]any{"symbol": name, "callers": real, "fnptr_callers": heurNames,
 			"callees": callees, "blast_radius": len(real) + len(heur)})
 		return
 	}
-	fmt.Printf("=== explore: %s ===\n", name)
+	fmt.Fprintf(c.Out, "=== explore: %s ===\n", name)
 	if len(locs) > 0 {
 		l := locs[0]
 		f := lsp.URIToPath(l.URI)
-		fmt.Printf("--- source (%s:%d) ---\n%s\n", f, l.Range.Start.Line+1,
+		fmt.Fprintf(c.Out, "--- source (%s:%d) ---\n%s\n", f, l.Range.Start.Line+1,
 			lsp.Snippet(f, l.Range.Start.Line, l.Range.End.Line))
 	}
-	fmt.Printf("--- callers (%d) ---\n  %s\n", len(real)+len(heur),
+	fmt.Fprintf(c.Out, "--- callers (%d) ---\n  %s\n", len(real)+len(heur),
 		strings.Join(append(real, heurNames...), "\n  "))
-	fmt.Printf("--- callees (%d) ---\n  %s\n", len(callees), strings.Join(callees, "\n  "))
+	fmt.Fprintf(c.Out, "--- callees (%d) ---\n  %s\n", len(callees), strings.Join(callees, "\n  "))
 }
 
 // Symbols: file outline.
 func (c *Ctx) Symbols(file string) {
 	res, _ := c.Client.DocumentSymbol(file)
 	if c.JSON {
-		fmt.Println(string(res))
+		fmt.Fprintln(c.Out, string(res))
 		return
 	}
 	var syms []struct {
@@ -289,7 +337,7 @@ func (c *Ctx) Symbols(file string) {
 	}
 	json.Unmarshal(res, &syms)
 	for _, s := range syms {
-		fmt.Printf("%s\t[%s]\tL%d\n", s.Name, kindName(s.Kind), s.Range.Start.Line+1)
+		fmt.Fprintf(c.Out, "%s\t[%s]\tL%d\n", s.Name, kindName(s.Kind), s.Range.Start.Line+1)
 	}
 }
 
@@ -297,7 +345,7 @@ func (c *Ctx) Symbols(file string) {
 func (c *Ctx) Macro(name string) {
 	file, pos, ok := c.resolveSymbol(name)
 	if !ok {
-		fmt.Printf("symbol not found: %s\n", name)
+		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
 		return
 	}
 	res, _ := c.Client.Hover(file, pos)
@@ -307,9 +355,9 @@ func (c *Ctx) Macro(name string) {
 		} `json:"contents"`
 	}
 	if json.Unmarshal(res, &h) == nil && h.Contents.Value != "" {
-		fmt.Println(h.Contents.Value)
+		fmt.Fprintln(c.Out, h.Contents.Value)
 	} else {
-		fmt.Println(string(res))
+		fmt.Fprintln(c.Out, string(res))
 	}
 }
 
@@ -317,33 +365,33 @@ func (c *Ctx) Macro(name string) {
 func (c *Ctx) Rename(name, newName string, apply bool) {
 	file, pos, ok := c.resolveSymbol(name)
 	if !ok {
-		fmt.Printf("symbol not found: %s\n", name)
+		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
 		return
 	}
 	res, _ := c.Client.Rename(file, pos, newName)
 	edits := parseWorkspaceEdit(res)
 	if c.JSON {
-		emit(map[string]any{"symbol": name, "newName": newName, "edits": edits})
+		c.emit(map[string]any{"symbol": name, "newName": newName, "edits": edits})
 		return
 	}
-	fmt.Printf("rename %s -> %s : %d edits across %d files\n", name, newName,
+	fmt.Fprintf(c.Out, "rename %s -> %s : %d edits across %d files\n", name, newName,
 		countEdits(edits), len(edits))
 	for f, es := range edits {
-		fmt.Printf("  %s (%d)\n", f, len(es))
+		fmt.Fprintf(c.Out, "  %s (%d)\n", f, len(es))
 	}
 	if apply {
 		n, err := applyEdits(edits)
 		if err != nil {
-			fmt.Printf("apply failed: %v\n", err)
+			fmt.Fprintf(c.Out, "apply failed: %v\n", err)
 			return
 		}
-		fmt.Printf("applied %d edits.\n", n)
+		fmt.Fprintf(c.Out, "applied %d edits.\n", n)
 	} else {
-		fmt.Println("(dry-run; pass --apply to write changes)")
+		fmt.Fprintln(c.Out, "(dry-run; pass --apply to write changes)")
 	}
 }
 
-func emit(v any) { b, _ := json.MarshalIndent(v, "", "  "); fmt.Println(string(b)) }
+func (c *Ctx) emit(v any) { b, _ := json.MarshalIndent(v, "", "  "); fmt.Fprintln(c.Out, string(b)) }
 
 func dedup(in []string) []string {
 	seen := map[string]bool{}

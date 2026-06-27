@@ -98,7 +98,7 @@ ccq (Go) ── LSP (JSON-RPC/stdio) ──► clangd ──► compile_commands
 - The first query in a cold repo waits for clangd to index (seconds); clangd caches the index on disk, so later queries are fast.
 
 ## Status
-v0.1 — navigation (search/def/refs/callers/callees/impact/explore/symbols/macro), fnptr heuristic, and `rename` editing are working. Roadmap: warm-clangd daemon, `replace-body`/`insert` edits, git-diff incremental, graph export.
+v0.2 — navigation (search/def/refs/callers/callees/impact/explore/symbols/macro), fnptr heuristic, `rename` editing, and a **warm-clangd daemon** are working. The first query in a repo spawns the daemon (indexes once); subsequent queries are **sub-second** (e.g. redis `callers` 0.6s, `explore` 0.07s warm vs ~30s cold). `ccq status` / `ccq shutdown` manage it; `--no-daemon` runs inline. Roadmap: `replace-body`/`insert` edits, git-diff incremental, graph export.
 
 ## License
 MIT. Reuses architecture ideas validated by `troberti/clangd-query` (MIT), `mpsm/mcp-cpp`, and `2015xli/clangd-graph-rag`.
