@@ -1,0 +1,30 @@
+name: nightly
+on:
+  schedule:
+    - cron: '0 18 * * *'      # 18:00 UTC every night
+  workflow_dispatch:           # allow manual run
+permissions:
+  contents: write
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.23' }
+      - name: Build all platforms
+        run: ./build-release.sh "nightly-$(date +%Y%m%d)"
+      - name: Publish rolling nightly prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly (latest main)
+          prerelease: true
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS
+          body: |
+            Auto-built every night from `main`. Latest, possibly-unstable binaries.
+            For stable, use a tagged release. Requires `clangd` on PATH.

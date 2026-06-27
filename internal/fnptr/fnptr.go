@@ -39,7 +39,6 @@ var (
 	reTypedefFn    = regexp.MustCompile(`typedef\s+[\w\s\*]+\(\s*\*\s*(\w+)\s*\)\s*\(`)
 	reStructHdr    = regexp.MustCompile(`\bstruct\s+(\w+)\s*\{`)
 	reFieldFnPtr   = regexp.MustCompile(`\(\s*\*\s*(\w+)\s*\)\s*\(`) // RET (*name)(...)
-	reFieldAny     = regexp.MustCompile(`\b(\w+)\s*;`)               // ...; -> last ident is field name
 	reInitHdr      = regexp.MustCompile(`\bstruct\s+(\w+)\s+\w+(?:\[\s*\w*\s*\])?\s*=\s*\{`)
 	reDesignated   = regexp.MustCompile(`^\.\s*(\w+)\s*=\s*&?\s*(\w+)\s*$`)
 	reIdent        = regexp.MustCompile(`^&?\s*(\w+)\s*$`)
