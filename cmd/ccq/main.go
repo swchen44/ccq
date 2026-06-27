@@ -35,8 +35,11 @@ NAVIGATE:
   symbols <file>          file outline
   macro <symbol>          macro expansion / signature (hover)
 
-EDIT (symbol-level, Serena-parity):
-  rename <symbol> <new> [--apply]   safe workspace-wide rename (dry-run by default)
+EDIT (symbol-level, Serena-parity; dry-run unless --apply):
+  rename <symbol> <new> [--apply]            safe workspace-wide rename
+  replace-body <symbol> <file> [--apply]     replace a symbol's whole definition
+  insert-before <symbol> <file> [--apply]    insert content before a symbol
+  insert-after <symbol> <file> [--apply]     insert content after a symbol
 
 EXPORT (query with your own tools):
   export [--format json|sql] [--out f]   dump symbols + call graph
@@ -62,6 +65,7 @@ var queryCmds = map[string]bool{
 	"search": true, "def": true, "show": true, "refs": true, "usages": true,
 	"callers": true, "callees": true, "impact": true, "explore": true,
 	"symbols": true, "macro": true, "rename": true, "export": true, "fnptr": true,
+	"replace-body": true, "insert-before": true, "insert-after": true,
 }
 
 func main() {

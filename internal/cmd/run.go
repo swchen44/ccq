@@ -69,6 +69,12 @@ func (c *Ctx) Dispatch(r Request) bool {
 		c.Export(r.Format, r.OutPath)
 	case "fnptr":
 		c.FnptrCheck()
+	case "replace-body":
+		c.ReplaceBody(a(0), a(1), r.Apply)
+	case "insert-before":
+		c.Insert(a(0), "before", a(1), r.Apply)
+	case "insert-after":
+		c.Insert(a(0), "after", a(1), r.Apply)
 	default:
 		return false
 	}
@@ -462,6 +468,97 @@ func (c *Ctx) Rename(name, newName string, apply bool) {
 			return
 		}
 		fmt.Fprintf(c.Out, "applied %d edits.\n", n)
+	} else {
+		fmt.Fprintln(c.Out, "(dry-run; pass --apply to write changes)")
+	}
+}
+
+// symbolRange returns the full source range of the named symbol in its file.
+func (c *Ctx) symbolRange(name string) (file string, rng lsp.Range, ok bool) {
+	f, _, found := c.resolveSymbol(name)
+	if !found {
+		return "", lsp.Range{}, false
+	}
+	res, _ := c.Client.DocumentSymbol(f)
+	var syms []struct {
+		Name  string    `json:"name"`
+		Range lsp.Range `json:"range"`
+	}
+	json.Unmarshal(res, &syms)
+	for _, s := range syms {
+		if s.Name == name {
+			return f, s.Range, true
+		}
+	}
+	return "", lsp.Range{}, false
+}
+
+// ReplaceBody replaces the named symbol's whole definition with newFile's content.
+func (c *Ctx) ReplaceBody(name, newFile string, apply bool) {
+	if newFile == "" {
+		fmt.Fprintln(c.Out, "usage: ccq replace-body <symbol> <newcontent-file> [--apply]")
+		return
+	}
+	file, rng, ok := c.symbolRange(name)
+	if !ok {
+		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
+		return
+	}
+	content, err := os.ReadFile(newFile)
+	if err != nil {
+		fmt.Fprintf(c.Out, "read %s: %v\n", newFile, err)
+		return
+	}
+	edits := map[string][]textEdit{file: {{Range: rng, NewText: string(content)}}}
+	c.applyOrPreview("replace-body "+name, edits, apply)
+}
+
+// Insert inserts newFile's content before/after the named symbol.
+func (c *Ctx) Insert(name, where, newFile string, apply bool) {
+	if newFile == "" {
+		fmt.Fprintf(c.Out, "usage: ccq insert-%s <symbol> <content-file> [--apply]\n", where)
+		return
+	}
+	file, rng, ok := c.symbolRange(name)
+	if !ok {
+		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
+		return
+	}
+	content, err := os.ReadFile(newFile)
+	if err != nil {
+		fmt.Fprintf(c.Out, "read %s: %v\n", newFile, err)
+		return
+	}
+	at := rng.Start
+	text := string(content) + "\n"
+	if where == "after" {
+		at = rng.End
+		text = "\n" + string(content)
+	}
+	edits := map[string][]textEdit{file: {{Range: lsp.Range{Start: at, End: at}, NewText: text}}}
+	c.applyOrPreview(fmt.Sprintf("insert-%s %s", where, name), edits, apply)
+}
+
+// applyOrPreview prints the edit set and applies it when apply is true.
+func (c *Ctx) applyOrPreview(label string, edits map[string][]textEdit, apply bool) {
+	if c.JSON {
+		c.emit(map[string]any{"op": label, "edits": edits, "applied": apply})
+		if apply {
+			applyEdits(edits)
+		}
+		return
+	}
+	fmt.Fprintf(c.Out, "%s: %d edit(s) across %d file(s)\n", label, countEdits(edits), len(edits))
+	for f := range edits {
+		fmt.Fprintf(c.Out, "  %s\n", f)
+	}
+	if apply {
+		n, err := applyEdits(edits)
+		if err != nil {
+			fmt.Fprintf(c.Out, "apply failed: %v\n", err)
+			return
+		}
+		fmt.Fprintf(c.Out, "applied %d edit(s).\n", n)
 	} else {
 		fmt.Fprintln(c.Out, "(dry-run; pass --apply to write changes)")
 	}
