@@ -1,0 +1,27 @@
+name: release
+on:
+  push:
+    tags: ['v*']           # push a tag like v0.3.0 to trigger a release
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.23' }
+      - name: Build all platforms
+        run: ./build-release.sh "${GITHUB_REF_NAME}"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS
+          body: |
+            ccq ${{ github.ref_name }} — clangd-powered C/C++ code intelligence CLI.
+            Download the archive for your platform, extract, and run `./install.sh` (or `install.ps1`).
+            Requires `clangd` on PATH (or pass `--clangd <path>`).

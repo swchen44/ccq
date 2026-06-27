@@ -3,3 +3,4 @@
 ccq-*-*
 *.test
 .cache/
+dist/

@@ -103,6 +103,36 @@ ccq (Go) ── LSP (JSON-RPC/stdio) ──► clangd ──► compile_commands
 - `ccq init` finds `compile_commands.json` (or generates it via CMake/Meson/bear). With it, clangd is compiler-accurate; without it, clangd runs in degraded same-file mode (ccq warns).
 - The first query in a cold repo waits for clangd to index (seconds); clangd caches the index on disk, so later queries are fast.
 
+## Release / distribution (giving ccq to others)
+
+ccq is a single static binary per platform — distribution is just "ship the binary + SKILL.md". Recipients also need `clangd` (or pass `--clangd <path>`).
+
+**Option A — build all platforms locally**
+```bash
+./build-release.sh v0.3.0
+# → dist/ccq-{darwin,linux,windows}-{amd64,arm64}.{tar.gz,zip} + SHA256SUMS
+```
+Hand the matching archive to each user; they extract and run `./install.sh` (or `install.ps1`). Each archive bundles the binary, SKILL.md, README, LICENSE and the installer.
+
+**Option B — automated GitHub Release (recommended)**
+```bash
+git tag v0.3.0 && git push origin v0.3.0
+```
+`.github/workflows/release.yml` cross-compiles all platforms and publishes a GitHub Release with the archives + checksums. Users then:
+```bash
+curl -fsSL -O https://github.com/swchen44/ccq/releases/download/v0.3.0/ccq-linux-amd64.tar.gz
+tar xzf ccq-linux-amd64.tar.gz && cd ccq-linux-amd64 && ./install.sh
+```
+
+**Option C — intranet / air-gapped**
+Build once (`go build -o ccq ./cmd/ccq`, no network needed), copy the single binary + `SKILL.md` + a platform `clangd` binary onto the target machine, put both on PATH, and point ccq at clangd with `--clangd` if needed.
+
+**Recipient setup (any option)**
+1. Put `ccq` (or `ccq.exe`) on PATH.
+2. Copy `SKILL.md` to `~/.claude/skills/ccq/SKILL.md` (Claude Code) or the agent's skills dir.
+3. Ensure `clangd` is installed (or `ccq --clangd /path/to/clangd ...`).
+4. In a C/C++ repo: `ccq init` then `ccq explore main`.
+
 ## Status
 v0.3 — navigation, **upgraded fn-pointer dispatch** (struct-keyed + positional tables + field←field, no cross-bleed), **no-build mode** (compile_flags.txt), **macro search**, **graph export** (json/sql), `rename` editing, and a **warm-clangd daemon** (sub-second repeated queries). Roadmap: `replace-body`/`insert` edits, git-diff incremental indexing.
 
