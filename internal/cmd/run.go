@@ -183,8 +183,15 @@ func (c *Ctx) Search(query string) {
 	}
 }
 
-// Def: show the definition snippet of a symbol.
+// Def: show the definition snippet of a symbol. Prefers the .c definition (with a
+// body) over a header prototype — clangd's go-to-definition can jump the wrong way.
 func (c *Ctx) Def(name string) {
+	if file, rng, ok := c.symbolRange(name); ok {
+		fmt.Fprintf(c.Out, "// %s:%d\n%s\n", file, rng.Start.Line+1,
+			lsp.Snippet(file, rng.Start.Line, rng.End.Line))
+		return
+	}
+	// fallback for symbols not in documentSymbol (e.g. macros): resolveSymbol + definition
 	file, pos, ok := c.resolveSymbol(name)
 	if !ok {
 		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
@@ -283,11 +290,10 @@ func (c *Ctx) calleeNames(name, file string, pos lsp.Position) []string {
 			set[x.Name] = true
 		}
 	}
-	// 2) body-scan: call sites in the function body that resolve to a known symbol
-	if locs, _ := c.Client.Definition(file, pos); len(locs) > 0 {
-		l := locs[0]
-		f := lsp.URIToPath(l.URI)
-		body := lsp.Snippet(f, l.Range.Start.Line, l.Range.End.Line)
+	// 2) body-scan: call sites in the function's *definition* body (symbolRange picks
+	// the .c definition, not a header prototype) that resolve to a known symbol
+	if df, rng, ok := c.symbolRange(name); ok {
+		body := lsp.Snippet(df, rng.Start.Line, rng.End.Line)
 		for _, m := range reCallSite.FindAllStringSubmatch(body, -1) {
 			nm := m[1]
 			if nm == name || isCKeyword(nm) || set[nm] {
@@ -383,7 +389,6 @@ func (c *Ctx) Explore(name string) {
 		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
 		return
 	}
-	locs, _ := c.Client.Definition(file, pos)
 	real, heur := c.callerNames(name)
 	callees := c.calleeNames(name, file, pos)
 	var heurNames []string
@@ -396,11 +401,10 @@ func (c *Ctx) Explore(name string) {
 		return
 	}
 	fmt.Fprintf(c.Out, "=== explore: %s ===\n", name)
-	if len(locs) > 0 {
-		l := locs[0]
-		f := lsp.URIToPath(l.URI)
-		fmt.Fprintf(c.Out, "--- source (%s:%d) ---\n%s\n", f, l.Range.Start.Line+1,
-			lsp.Snippet(f, l.Range.Start.Line, l.Range.End.Line))
+	// source from the .c definition (symbolRange), not a header prototype
+	if df, rng, ok := c.symbolRange(name); ok {
+		fmt.Fprintf(c.Out, "--- source (%s:%d) ---\n%s\n", df, rng.Start.Line+1,
+			lsp.Snippet(df, rng.Start.Line, rng.End.Line))
 	}
 	fmt.Fprintf(c.Out, "--- callers (%d) ---\n  %s\n", len(real)+len(heur),
 		strings.Join(append(real, heurNames...), "\n  "))

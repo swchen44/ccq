@@ -8,6 +8,10 @@ All notable changes to ccq are documented here. Format follows
 - `explore` now computes callees with the same body-scan + fn-pointer logic as the
   standalone `callees` command (it was still using clangd's unreliable `outgoingCalls`
   and under-reporting — e.g. an fn-pointer dispatcher showed 0 callees).
+- `def` / `explore` / `callees` now show/scan the **definition** (the `.c` body), not a
+  header **prototype**: clangd's go-to-definition can jump from the definition to the
+  declaration, which made `explore lookupCommand` show the prototype and report 0 callees.
+  They now use `symbolRange` (source-file definition preferred).
 
 ## [0.5.0] — 2026-06-28
 ### Added
