@@ -5,6 +5,19 @@ All notable changes to ccq are documented here. Format follows
 
 ## [Unreleased]
 ### Added
+- **`ccq.json` settings + `--config`** — a project/user config (`./ccq.json` >
+  `~/.config/ccq/ccq.json` > `--config <path>`) with `allow`/`deny` **regex index filters**
+  applied globally (OpenAll, fn-pointer scan, export). `ccq config` shows the effective settings.
+  Distinct filters get distinct warm daemons.
+- **`ccq wait-index`** — block until the index is ready, so an agent can wait before querying
+  (avoids partial results). Reports the mode + file count. `--background` returns at once (poll
+  `ccq status`); `--rebuild` forces a fresh index (deletes `<root>/.cache/clangd` — **shared with
+  editor clangd, warned**). `ccq status` now reports `ready` / `indexing…` / `not running`.
+- **`ccq cache list|clean|path`** — inspect and clean ccq's caches (daemon state, staged compile
+  DBs, and each project's `.cache/clangd`), with sizes/dates/project paths. `clean --all|--project
+  p|--older-than N`; `--index` also clears clangd's index (**shared with VS Code, warned**).
+- **`ccq doctor`** — dump versions (ccq, clangd), the effective config (+ regex errors), the
+  compile-database mode/entry count, cache sizes, and daemon state — with fix-it hints.
 - **`--compdb a.json,b.json`** — use compile databases of **any name**, and **merge** several
   (multi-target builds emit several `compile_commands.json`, often renamed). The compile DB is
   decoupled from the source root (`-p`), and the warm daemon is keyed by `(root, compdb set)` so

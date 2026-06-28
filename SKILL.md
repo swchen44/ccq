@@ -39,6 +39,8 @@ ccq <command> [args] [-p <project-dir>] [--json]
 ## Guidance for agents
 - Prefer **one `ccq explore X`** over multiple grep/Read — it returns source + callers + callees + blast-radius in a single call (token-efficient).
 - The first command in a cold repo waits for clangd to index (a few seconds); subsequent calls are fast (cached).
+- **Before a big study on a cold repo, run `ccq wait-index` once** — it blocks until indexing is complete, so your queries return *complete* results (querying mid-index can under-report callers/symbols). `ccq status` shows `ready` / `indexing…`.
+- To narrow what gets indexed on a huge repo, a `ccq.json` with `allow`/`deny` regex limits the file set (`ccq config` shows it). `ccq doctor` dumps the environment when something looks off; `ccq cache` inspects/cleans index caches.
 - On a large repo with a persisted clangd index, add `--incremental` to make a warm daemon restart open only git-changed files (~2.4× faster start, same results).
 - For C/C++, trust ccq's call graph over text search: indirect/macro-hidden/typedef'd calls that grep misses are resolved here.
 - `rename` is **dry-run by default**; only pass `--apply` once the edit list looks right.

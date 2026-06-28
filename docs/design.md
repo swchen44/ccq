@@ -168,6 +168,24 @@ index (RAM ×N, no sharing), pays its **own** cold-index cost, and may contend o
 root" and only opens extra instances **on demand** per distinct `--compdb`. Use a few configs, not
 dozens.
 
+### Index control & caches
+
+- **What gets indexed** — `OpenAll` opens *every* in-scope `.c/.h` regardless of the compile DB, so
+  files missing from `compile_commands.json` are still indexed (with clangd's fallback flags), just
+  less accurately. A `ccq.json` `allow`/`deny` regex (package `internal/config`, applied in
+  `OpenAll`/`fnptr.cFiles`/`export.sourceFiles`) narrows the scope; the daemon is keyed by the
+  filter so a different `ccq.json` gets a different warm clangd.
+- **Knowing the index is ready** — ccq declares `window/workDoneProgress`; with
+  `compile_commands.json` clangd sends `$/progress` and `WaitIndex` waits for its **end** (once
+  indexing *began* it never returns early on the baseline). No-build has **no background index**
+  (`idx=0`), so readiness is `OpenAll`-driven and best-effort. The daemon only starts listening
+  *after* `WaitIndex`, so "reachable" ⇒ "ready"; `ccq wait-index` blocks on exactly this, and an
+  `indexing` marker file lets `ccq status` report `indexing…` during a `--background` warm-up.
+- **Cache layout** — `UserCacheDir/ccq/<hash>` (per-daemon state + a `meta` recording the project
+  root), `UserCacheDir/ccq/compdb/<hash>` (staged merged DBs), and `<root>/.cache/clangd` (clangd's
+  index — the big one, **shared with editor clangd / VS Code**). `ccq cache` lists/cleans these;
+  `--index` and `wait-index --rebuild` touch `.cache/clangd` and warn about the editor sharing.
+
 ## 7. Key implementation notes (gotchas)
 
 - `CallHierarchyItem.Data` (clangd's opaque payload) **must be round-tripped** or

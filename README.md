@@ -76,6 +76,10 @@ tree-sitter extractor is an engine transplant whose endpoint is just a heavier c
 **Project**
 - `init` — locate/generate `compile_commands.json` (CMake / Meson / bear), **or a no-build `compile_flags.txt`** if there's no build system; warm clangd
 - `--compdb a.json,b.json` — point at one or more compile databases of **any name** (multi-target builds emit several, often renamed). They're auto-merged; each distinct set gets its **own warm clangd** (a daemon per build config — switch configs with no re-index). See [docs/design.md §6](docs/design.md).
+- `--config <p>` / `ccq.json` — settings file (`./ccq.json` > `~/.config/ccq/ccq.json` > `--config`) with **`allow`/`deny` regex** to control which files are indexed; `ccq config` shows the effective settings.
+- `wait-index` — **block until the index is ready** (agents: run this first to avoid querying mid-index); `--background` returns at once, `--rebuild` forces a fresh index. `status` reports `ready`/`indexing…`/`not running`.
+- `cache [list|clean|path]` — inspect/clean index caches (daemon state, staged DBs, clangd's `.cache/clangd`); sizes/dates/projects. `clean --older-than N | --project p | --all [--index]`.
+- `doctor` — dump versions, config, compile-DB mode, cache sizes + daemon state for debugging.
 - `status`, `shutdown`, `version`
 
 **Differentiators**
