@@ -43,7 +43,9 @@ EDIT (symbol-level, Serena-parity; dry-run unless --apply):
   insert-after <symbol> <file> [--apply]     insert content after a symbol
 
 EXPORT (query with your own tools):
-  export [--format json|sql] [--out f]   dump symbols + call graph
+  export [--format json|sql|html] [--focus <sym> [-d N]] [--out f]
+                          dump the call graph (whole repo, or a --focus neighborhood);
+                          --format html writes a self-contained interactive graph
   fnptr                   validate the fn-pointer override table (ccq.fnptr.json)
 
 SERVE:
@@ -146,7 +148,7 @@ func main() {
 		format = "json"
 	}
 	req := cmd.Request{Cmd: sub, Args: normalize(sub, args), JSON: jsonOut, Depth: depth,
-		Apply: hasFlag("--apply"), Format: format, OutPath: outPath}
+		Apply: hasFlag("--apply"), Format: format, OutPath: outPath, Focus: flagVal("--focus")}
 
 	// Daemon path (default): fast warm clangd.
 	if !noDaemon {
@@ -217,7 +219,7 @@ func parseFlags(in []string) (args []string, root string, jsonOut bool, clangdBi
 		case "--no-daemon":
 			noDaemon = true
 		case "--apply", "--incremental":
-		case "--format", "--out":
+		case "--format", "--out", "--focus":
 			i++ // value consumed via flagVal
 		default:
 			args = append(args, in[i])

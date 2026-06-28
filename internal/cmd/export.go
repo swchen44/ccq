@@ -204,28 +204,7 @@ func (c *Ctx) buildFullGraph() ([]exNode, []exEdge) {
 			}
 		}
 	}
-
-	// Default: write the dump to c.Out (stdout in direct mode, or the daemon's
-	// response back to the client). --out writes to a file instead.
-	var out io.Writer = c.Out
-	var fh *os.File
-	if outPath != "" {
-		if f, err := os.Create(outPath); err == nil {
-			fh = f
-			defer fh.Close()
-			out = fh
-		}
-	}
-
-	if format == "sql" {
-		writeSQL(out, nodes, edges)
-	} else {
-		b, _ := json.MarshalIndent(map[string]any{"nodes": nodes, "edges": edges}, "", " ")
-		fmt.Fprintln(out, string(b))
-	}
-	if outPath != "" {
-		fmt.Fprintf(c.Out, "exported %d nodes, %d edges -> %s\n", len(nodes), len(edges), outPath)
-	}
+	return nodes, edges
 }
 
 func writeSQL(out io.Writer, nodes []exNode, edges []exEdge) {

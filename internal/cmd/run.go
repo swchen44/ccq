@@ -30,8 +30,9 @@ type Request struct {
 	JSON    bool     `json:"json"`
 	Depth   int      `json:"depth"`
 	Apply   bool     `json:"apply"`
-	Format  string   `json:"format"`  // export: json|sql
+	Format  string   `json:"format"`  // export: json|sql|html
 	OutPath string   `json:"outPath"` // export: write to file
+	Focus   string   `json:"focus"`   // export: build a neighborhood around this symbol
 }
 
 // Dispatch runs a single command. Output goes to c.Out. Returns false for an
@@ -66,7 +67,7 @@ func (c *Ctx) Dispatch(r Request) bool {
 	case "rename":
 		c.Rename(a(0), a(1), r.Apply)
 	case "export":
-		c.Export(r.Format, r.OutPath)
+		c.Export(r.Format, r.OutPath, r.Focus, r.Depth)
 	case "fnptr":
 		c.FnptrCheck()
 	case "replace-body":
