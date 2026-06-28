@@ -271,15 +271,10 @@ func isCKeyword(s string) bool {
 	return false
 }
 
-// Callees: what this calls. clangd's outgoingCalls is unreliable, so we union it
-// with a scan of the function body (call sites verified against the symbol index)
-// and the fn-pointer dispatch targets.
-func (c *Ctx) Callees(name string) {
-	file, pos, ok := c.resolveSymbol(name)
-	if !ok {
-		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
-		return
-	}
+// calleeNames computes what `name` calls: clangd's outgoingCalls is unreliable, so
+// we union it with a scan of the function body (call sites verified against the
+// symbol index) and the fn-pointer dispatch targets. Shared by Callees and Explore.
+func (c *Ctx) calleeNames(name, file string, pos lsp.Position) []string {
 	set := map[string]bool{}
 	// 1) clangd outgoingCalls (when it returns anything)
 	if items, _ := c.Client.PrepareCallHierarchy(file, pos); len(items) > 0 {
@@ -311,7 +306,17 @@ func (c *Ctx) Callees(name string) {
 	for k := range set {
 		out = append(out, k)
 	}
-	out = dedup(out)
+	return dedup(out)
+}
+
+// Callees: what this calls.
+func (c *Ctx) Callees(name string) {
+	file, pos, ok := c.resolveSymbol(name)
+	if !ok {
+		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
+		return
+	}
+	out := c.calleeNames(name, file, pos)
 	if c.JSON {
 		c.emit(map[string]any{"symbol": name, "callees": out})
 		return
@@ -380,14 +385,7 @@ func (c *Ctx) Explore(name string) {
 	}
 	locs, _ := c.Client.Definition(file, pos)
 	real, heur := c.callerNames(name)
-	var callees []string
-	if items, _ := c.Client.PrepareCallHierarchy(file, pos); len(items) > 0 {
-		cs, _ := c.Client.OutgoingCalls(items[0])
-		for _, x := range cs {
-			callees = append(callees, x.Name)
-		}
-	}
-	callees = dedup(callees)
+	callees := c.calleeNames(name, file, pos)
 	var heurNames []string
 	for _, h := range heur {
 		heurNames = append(heurNames, h.Func+" (fnptr)")

@@ -3,6 +3,12 @@
 All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+### Fixed
+- `explore` now computes callees with the same body-scan + fn-pointer logic as the
+  standalone `callees` command (it was still using clangd's unreliable `outgoingCalls`
+  and under-reporting — e.g. an fn-pointer dispatcher showed 0 callees).
+
 ## [0.5.0] — 2026-06-28
 ### Added
 - **`--incremental` (opt-in lazy indexing)** — on a warm daemon restart with a
