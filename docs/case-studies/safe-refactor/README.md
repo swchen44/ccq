@@ -1,114 +1,133 @@
 # Case Study — Safe refactoring with ccq (impact → rename → replace-body)
 
-> **Status: skeleton.** Structure + exact commands are in place; the `TODO(capture)` blocks are
-> filled by running the commands on a real repo. This case study shows ccq's **editing** dimension
-> (Serena-parity) — the complement to [call-graph-redis-wpa](../call-graph-redis-wpa/README.md),
-> which showed navigation + fn-pointer + visualization.
+Shows ccq's **editing** dimension (Serena-parity) — the complement to
+[call-graph-redis-wpa](../call-graph-redis-wpa/README.md), which showed navigation + fn-pointer +
+visualization. Everything below is **real output** (run on **ctest8**); §5 lists the bug this
+exercise found and fixed.
 
-Target repo for the worked run: **ctest8** (tiny, fast) and/or **redis** (realistic blast radius).
-Scenario: safely **rename** a widely-called function and **rewrite its body**, *seeing the blast
-radius first* and never touching a comment, string, or a same-named symbol in another scope.
+Scenario: safely **rename** `t_add` → `tally_add` and **rewrite its body**, *seeing the blast radius
+first* and never breaking a comment or a same-named symbol in another scope.
 
 ---
 
 ## 1. Why this is hard without ccq
 
-An agent asked to "rename `t_add` to `tally_add` everywhere and tighten its body" with text tools:
-
 ```mermaid
 flowchart TD
     R[rename t_add → tally_add] --> S["sed -i 's/t_add/tally_add/g'"]
-    S --> B1["breaks: comments, strings, t_add_helper, other-scope t_add"]
+    S --> B1["breaks: comments, strings, t_add in other scopes"]
     R --> G[grep to find call sites] --> B2["misses fn-pointer dispatch + can't see blast radius"]
     B1 --> X[silent breakage, no preview]
     B2 --> X
 ```
 
-Text rename is scope-blind and string-blind; and you change code **before** knowing what depends on it.
+Text rename is scope-blind and string-blind, and you change code **before** knowing what depends on it.
 
 ## 2. The ccq workflow — look before you leap
 
 ```mermaid
 flowchart LR
-    I["1. ccq impact t_add -d 2<br/><i>blast radius first</i>"] --> P["2. ccq rename t_add tally_add<br/><i>dry-run preview</i>"]
-    P --> A["3. ccq rename … --apply<br/><i>scope-correct write</i>"]
-    A --> RB["4. ccq replace-body tally_add new.c<br/><i>rewrite just the body</i>"]
-    RB --> V["5. ccq callers tally_add<br/><i>verify nothing lost</i>"]
+    I["1. impact -d 2<br/>blast radius first"] --> P["2. rename (dry-run)<br/>preview"]
+    P --> A["3. rename --apply<br/>scope-correct write"]
+    A --> RB["4. replace-body<br/>rewrite the body"]
+    RB --> V["5. callers<br/>verify"]
 ```
 
 ### Step 1 — blast radius before touching anything
-```bash
-ccq impact t_add -d 2 -p repos/ctest8
+```console
+$ ccq impact t_add -d 2
+impact radius of t_add (depth 2): 8 symbols
+  VT (hop 1)            bar_wrapper (hop 1)   foo_wrapper (hop 1)
+  get_op (hop 1)        helper (hop 1)        knr_caller (hop 1)
+  via_typedef (hop 1)   f5a_use (hop 2)
 ```
-```text
-TODO(capture): transitive callers to depth 2 (incl. fn-pointer dispatchers)
-```
+You see the full reach (incl. transitive `f5a_use` at hop 2) *before* editing. `ccq callers t_add`
+also adds the fn-pointer dispatcher `f6_dispatch (fnptr via vtable.op_a)` that `impact` (clangd call
+hierarchy) doesn't.
 
 ### Step 2 — preview the rename (dry-run, default)
-```bash
-ccq rename t_add tally_add -p repos/ctest8
+```console
+$ ccq rename t_add tally_add
+rename t_add -> tally_add : 7 edits across 6 files
+  targets.h (1)   targets.c (1)   f1_declarators.c (2)
+  f2_typedef.c (1)   f5a_static.c (1)   f6_ops.c (1)
+(dry-run; pass --apply to write changes)
 ```
-```text
-TODO(capture): edit list across files — clangd-accurate, skips comments/strings and same-named
-symbols in other scopes (the thing sed gets wrong)
-```
+clangd-accurate: it edits the declaration in `targets.h`, the definition in `targets.c`, and every
+resolved call site — **across files**, and (see §5) it leaves comments and other-scope tokens alone.
 
 ### Step 3 — apply it
-```bash
-ccq rename t_add tally_add --apply -p repos/ctest8
-```
-```text
-TODO(capture): "applied N edit(s)."
+```console
+$ ccq rename t_add tally_add --apply
+... applied 7 edits.
 ```
 
 ### Step 4 — rewrite just the body (symbol-level, not line numbers)
-```bash
-printf 'int tally_add(int a, int b){ return a + b; /* hardened */ }' > /tmp/new.c
-ccq replace-body tally_add /tmp/new.c -p repos/ctest8            # dry-run
-ccq replace-body tally_add /tmp/new.c --apply -p repos/ctest8    # write
+```console
+$ printf 'int tally_add(int a,int b){ return a + b; /* hardened */ }' > /tmp/new.c
+$ ccq replace-body tally_add /tmp/new.c            # dry-run
+replace-body tally_add: 1 edit(s) across 1 file(s)
+  targets.c
+(dry-run; pass --apply to write changes)
+$ ccq replace-body tally_add /tmp/new.c --apply
+... applied 1 edit(s).
 ```
-```text
-TODO(capture): dry-run edit + applied; show the .c body changed, sub/other symbols untouched
-```
+`replace-body` targets the **definition body** in `targets.c` by symbol — `t_sub`/`t_mul` next to it
+are untouched. No line-number bookkeeping.
 
-### Step 5 — verify nothing was lost
-```bash
-ccq callers tally_add -p repos/ctest8
+### Step 5 — verify on the same warm daemon
+```console
+$ ccq callers tally_add
+callers of tally_add:
+  VT   get_op   helper   knr_caller   via_typedef
+  f6_dispatch  (fnptr via vtable.op_a @ f6_ops.c:4)
 ```
-```text
-TODO(capture): same caller set as t_add had in step 1 (rename preserved the graph)
-```
+The rename + body-rewrite are reflected immediately (this used to be broken — see §5, bug found).
 
-## 3. The picture — before/after the rename
+## 3. The picture — the renamed neighborhood
 
-```bash
-ccq export --format html --focus tally_add -d 1 -p repos/ctest8 --out after.html
-```
-`TODO(capture): screenshot / link the interactive graph showing the renamed node + preserved edges`
+`ccq export --format html --focus tally_add -d 1 --out after.html` →
+[after-rename-graph.html](after-rename-graph.html) (interactive; `tally_add` focus, its callers, and
+the fn-pointer edge from `f6_dispatch`).
 
 ## 4. What this proves
 
-- **Scope- and string-correct rename** (clangd), not text substitution.
 - **Blast radius first** (`impact`) — decide *before* editing.
-- **Symbol-level body rewrite** (`replace-body`) — no line-number bookkeeping.
-- Same zero-dependency single binary; works in no-build mode too (see the intranet case study — TODO).
+- **Scope- and comment-correct rename** (clangd), not text substitution.
+- **Symbol-level body rewrite** (`replace-body`) — no line numbers; siblings untouched.
+- Same zero-dependency single binary.
 
-## 5. Bugs this case study found
+## 5. Findings — what the real run surfaced ✅
 
-`TODO`: writing a case study is a test — record anything the real run surfaces here (the first case
-study found 5). Leave empty only if genuinely none.
+**🐛 Bug found & fixed — warm daemon served stale results after `--apply`.**
+On the first run, right after `ccq rename t_add tally_add --apply`, the *same* daemon answered
+`ccq callers tally_add` with `(none)` and `ccq replace-body tally_add` with "symbol not found".
+Root cause: the apply wrote files on disk but didn't tell clangd, so its in-memory index was
+pre-rename. **Fixed**: after an apply, ccq now re-syncs clangd (`textDocument/didChange`) for the
+changed files and drops the fn-pointer cache. The Step-5 output above is the post-fix result.
+
+**⚠️ Honest limitation — clangd rename doesn't rewrite macro-body occurrences.**
+`callers t_add` had 8 entries before; `callers tally_add` has 6. The missing two —
+`foo_wrapper`/`bar_wrapper` — are generated by an X-macro whose body still reads
+`... { return t_add(1,1); }`. clangd renames *resolved symbol references*, not tokens inside an
+unexpanded macro definition, so that call site keeps the old name. (Conversely, clangd correctly
+**did not** touch the `t_add` mentions that were only in comments.) Mitigation: a follow-up
+`ccq search t_add` surfaces the leftover macro occurrence to fix by hand.
+
+> The case study is, itself, a test — one real bug fixed, one real limitation documented.
 
 ## 6. Reproduce
 
 ```bash
-# tiny + fast
-ccq impact t_add -d 2 -p repos/ctest8
-ccq rename t_add tally_add --apply -p repos/ctest8
-ccq replace-body tally_add /tmp/new.c --apply -p repos/ctest8
-
-# realistic blast radius (a widely-called redis function)
-ccq impact lookupCommand -d 2 -p repos/redis
-ccq rename lookupCommand lookupCmd -p repos/redis   # dry-run only — don't --apply a real repo
+# work on a copy — rename --apply rewrites files
+cp -r repos/ctest8 /tmp/refactor && cd /tmp/refactor   # regenerate compile_commands.json for the new path
+ccq impact t_add -d 2
+ccq rename t_add tally_add --apply
+printf 'int tally_add(int a,int b){ return a + b; }' > /tmp/new.c
+ccq replace-body tally_add /tmp/new.c --apply
+ccq callers tally_add
+ccq search t_add                 # catch macro-body leftovers
+ccq export --format html --focus tally_add -d 1 --out after.html
 ```
 
 Design: [../../design.md](../../design.md) · Benchmark: [../../benchmark.md](../../benchmark.md).
