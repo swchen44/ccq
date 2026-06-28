@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // Caller is a synthesized heuristic caller of a target handler.
@@ -175,7 +176,34 @@ type index struct {
 	manualLinks    map[string][]Caller // handler -> direct callers from the override table
 }
 
+var (
+	cacheMu   sync.Mutex
+	cacheRoot string
+	cacheIdx  *index
+)
+
+// Invalidate drops the cached index (call after files change within a long-lived
+// daemon session if you want fn-pointer results to reflect edits immediately).
+func Invalidate() {
+	cacheMu.Lock()
+	cacheRoot, cacheIdx = "", nil
+	cacheMu.Unlock()
+}
+
+// build returns the fn-pointer index for root, cached for the process lifetime so
+// repeated queries on a warm daemon don't rescan the whole repo each time.
 func build(root string) *index {
+	cacheMu.Lock()
+	defer cacheMu.Unlock()
+	if cacheIdx != nil && cacheRoot == root {
+		return cacheIdx
+	}
+	ix := buildFresh(root)
+	cacheRoot, cacheIdx = root, ix
+	return ix
+}
+
+func buildFresh(root string) *index {
 	ix := &index{
 		lines:          map[string][]string{},
 		fnPtrTypedefs:  map[string]bool{},
