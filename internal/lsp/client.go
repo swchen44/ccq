@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/swchen44/ccq/internal/config"
 )
 
 // Client wraps a clangd subprocess speaking LSP over stdio.
@@ -292,7 +294,7 @@ func (c *Client) openAllAfter(root string, cap int, priority []string) int {
 		}
 		switch filepath.Ext(p) {
 		case ".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh", ".hxx":
-			if c.Open(p) == nil {
+			if config.Keep(p) && c.Open(p) == nil {
 				n++
 			}
 		}

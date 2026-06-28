@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/swchen44/ccq/internal/config"
 )
 
 // Stage merges one or more compile_commands.json files (any filenames, anywhere)
@@ -150,7 +152,9 @@ func writeCompileFlags(root string) error {
 		}
 		switch filepath.Ext(p) {
 		case ".h", ".hpp", ".hh", ".hxx":
-			incl[filepath.Dir(p)] = true
+			if config.Keep(p) {
+				incl[filepath.Dir(p)] = true
+			}
 		}
 		return nil
 	})

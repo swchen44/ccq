@@ -182,8 +182,8 @@ func Serve(root, clangdBin, ccDir string, openCap int, maxWait, baseline time.Du
 
 // Query connects to the project's daemon (spawning it if needed) and runs req,
 // returning the command's text output.
-func Query(root, exe, clangdBin, compdbArg string, req cmd.Request) (string, error) {
-	conn, err := connectOrSpawn(root, exe, clangdBin, compdbArg)
+func Query(root, exe, clangdBin, compdbArg, configArg string, req cmd.Request) (string, error) {
+	conn, err := connectOrSpawn(root, exe, clangdBin, compdbArg, configArg)
 	if err != nil {
 		return "", err
 	}
@@ -230,7 +230,7 @@ func Shutdown(root string) error {
 	return nil
 }
 
-func connectOrSpawn(root, exe, clangdBin, compdbArg string) (net.Conn, error) {
+func connectOrSpawn(root, exe, clangdBin, compdbArg, configArg string) (net.Conn, error) {
 	if conn, err := dial(root); err == nil {
 		return conn, nil
 	}
@@ -241,6 +241,9 @@ func connectOrSpawn(root, exe, clangdBin, compdbArg string) (net.Conn, error) {
 	}
 	if compdbArg != "" {
 		args = append(args, "--compdb", compdbArg)
+	}
+	if configArg != "" {
+		args = append(args, "--config", configArg)
 	}
 	c := exec.Command(exe, args...)
 	detach(c)

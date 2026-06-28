@@ -17,6 +17,7 @@ import (
 
 	"github.com/swchen44/ccq/internal/cmd"
 	"github.com/swchen44/ccq/internal/compdb"
+	"github.com/swchen44/ccq/internal/config"
 	"github.com/swchen44/ccq/internal/daemon"
 	"github.com/swchen44/ccq/internal/lsp"
 	"github.com/swchen44/ccq/internal/mcp"
@@ -54,6 +55,7 @@ SERVE:
 
 PROJECT:
   init                    detect/generate compile_commands.json (or compile_flags.txt, no-build)
+  config                  show effective settings (ccq.json: allow/deny index filter)
   status                  is the warm daemon running?
   shutdown                stop the warm daemon
   version
@@ -67,6 +69,7 @@ FLAGS:
   --incremental warm restart opens only git-changed files (needs a persisted clangd index)
   --compdb a.json[,b.json…]  use these compile_commands.json file(s) (any name; merged);
                 each distinct set gets its own warm clangd (one per build config)
+  --config <p>  settings file (default: ./ccq.json or ~/.config/ccq/ccq.json) — allow/deny index filter
 `
 
 const version = "ccq 0.5.0"
@@ -98,7 +101,11 @@ func main() {
 	// distinct warm clangds instead of colliding on the root key.
 	cdbs := compdbPaths()
 	compdbArg := strings.Join(cdbs, ",")
-	daemon.SetKey(compdbArg)
+	// --config: load project/user settings (allow/deny index filter) and scope the
+	// daemon to them so a different filter gets a different warm clangd.
+	configArg := flagVal("--config")
+	config.Load(root, configArg)
+	daemon.SetKey(compdbArg + "\x00" + config.Key())
 	exe, _ := os.Executable()
 
 	switch sub {
@@ -127,6 +134,19 @@ func main() {
 		daemon.Shutdown(root)
 		fmt.Println("daemon: stopped")
 		return
+	case "config": // show the effective settings (source, allow/deny, problems)
+		if config.Source() == "" {
+			fmt.Println("no ccq.json found (looked at: ./ccq.json, ~/.config/ccq/ccq.json, --config)")
+			fmt.Println("all files indexed (no allow/deny filter).")
+		} else {
+			fmt.Printf("config: %s\n", config.Source())
+			s := config.Get()
+			fmt.Printf("  allow: %v\n  deny:  %v\n  fallbackFlags: %v\n", s.Allow, s.Deny, s.FallbackFlags)
+		}
+		for _, w := range config.Warnings() {
+			fmt.Fprintf(os.Stderr, "  warning: %s\n", w)
+		}
+		return
 	case "mcp": // serve ccq over the Model Context Protocol (JSON-RPC/stdio)
 		runner := func(sub, arg, croot string) (string, error) {
 			if croot == "" {
@@ -135,7 +155,7 @@ func main() {
 			croot = absOr(croot)
 			cd := resolveClangd(clangdBin)
 			req := cmd.Request{Cmd: sub, Args: []string{arg}, Depth: 3}
-			return daemon.Query(croot, exe, cd, compdbArg, req)
+			return daemon.Query(croot, exe, cd, compdbArg, configArg, req)
 		}
 		mcp.Serve(os.Stdin, os.Stdout, runner, root)
 		return
@@ -162,7 +182,7 @@ func main() {
 
 	// Daemon path (default): fast warm clangd.
 	if !noDaemon {
-		out, err := daemon.Query(root, exe, clangdBin, compdbArg, req)
+		out, err := daemon.Query(root, exe, clangdBin, compdbArg, configArg, req)
 		if err == nil {
 			fmt.Print(out)
 			return
@@ -265,8 +285,8 @@ func parseFlags(in []string) (args []string, root string, jsonOut bool, clangdBi
 			}
 		case "--no-daemon":
 			noDaemon = true
-		case "--apply", "--incremental":
-		case "--format", "--out", "--focus", "--compdb":
+		case "--apply", "--incremental", "--rebuild", "--background":
+		case "--format", "--out", "--focus", "--compdb", "--config":
 			i++ // value consumed via flagVal
 		default:
 			args = append(args, in[i])

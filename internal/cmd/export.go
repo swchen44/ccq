@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/swchen44/ccq/internal/config"
 	"github.com/swchen44/ccq/internal/fnptr"
 	"github.com/swchen44/ccq/internal/lsp"
 )
@@ -288,7 +289,9 @@ func sourceFiles(root string) []string {
 		}
 		switch filepath.Ext(p) {
 		case ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp":
-			out = append(out, p)
+			if config.Keep(p) {
+				out = append(out, p)
+			}
 		}
 		return nil
 	})

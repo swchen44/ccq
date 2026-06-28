@@ -18,6 +18,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/swchen44/ccq/internal/config"
 )
 
 // Caller is a synthesized heuristic caller of a target handler.
@@ -581,7 +583,9 @@ func cFiles(root string) []string {
 		}
 		switch filepath.Ext(p) {
 		case ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp":
-			out = append(out, p)
+			if config.Keep(p) {
+				out = append(out, p)
+			}
 		}
 		return nil
 	})

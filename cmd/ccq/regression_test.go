@@ -162,6 +162,23 @@ func TestRegrDaemonSyncAfterApply(t *testing.T) {
 	}
 }
 
+// ccq.json deny filter must exclude matching files from the index (the symbol in
+// a denied file becomes unfindable).
+func TestConfigDenyFilter(t *testing.T) {
+	bin := ccqbin(t)
+	proj := copyCproj(t)
+	os.WriteFile(filepath.Join(proj, "ccq.json"), []byte(`{ "deny": ["^main\\.c$"] }`), 0o644)
+	out := run(t, bin, "search", "caller_one", "-p", proj, "--no-daemon")
+	if strings.Contains(out, "caller_one") {
+		t.Errorf("deny ^main.c should exclude caller_one from the index\n%s", out)
+	}
+	// a non-denied symbol still resolves
+	out2 := run(t, bin, "search", "add", "-p", proj, "--no-daemon")
+	if !strings.Contains(out2, "add") {
+		t.Errorf("non-denied symbol add should still be found\n%s", out2)
+	}
+}
+
 // --compdb must accept a renamed compile database and drive clangd through it
 // (no compile_commands.json in the source root).
 func TestCompdbNamedFile(t *testing.T) {
