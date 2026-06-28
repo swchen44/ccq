@@ -142,14 +142,26 @@ methodology: [docs/benchmark.md](docs/benchmark.md)).
 | fn-pointer dispatch (F6) | ❌ | ✅ | ⚠️ | ⚠️ | ✅ |
 | 8 hard-C features passed | 2 | 3 | 7 | 7 | **8 (only one)** |
 | redis `lookupCommand` callers | 0 | 13 | 13 | 13 | **13** |
+| **Initial index / build** ⚠️ | ~4s | ~11–14s | needs full build + index | needs full build + index | **needs full build + ~30s index (ccq's weakest)** |
 | Warm repeated query | per-run | per-run | — | per-run | **~0.07–0.6s** |
-| Symbol rename (editing) | ❌ | ❌ | — | ✅ | ✅ |
-| Dependency footprint | self-build | ~188 MB | binary | ~890 pkgs | **single Go binary, 0 deps** |
+| Editing | — | — | rename | ✅ LSP | ✅ rename / replace-body / insert |
+| Integration | MCP | MCP | LSP (editor) | MCP | **CLI + agent skill** |
+| Install footprint (intranet) | 257 MB, vendored build | 188 MB Node bundle | ~100–350 MB binary | 🔴 ~890 pkgs + downloads clangd | **single Go binary, 0 Go deps** (needs clangd) |
 
-**Summary:** ccq is the only tool passing all 8 hard-C features — it keeps clangd's wins
-(`#ifdef`, macros, `typedef`, `_Generic`, function-level call graph) and adds the fn-pointer
-heuristic (the one feature CodeGraph beats clangd on), a warm daemon for speed, and stays a
-zero-dependency single binary.
+**Strengths** ✅ — only tool passing all 8 hard-C features; keeps clangd's wins (`#ifdef`, macros,
+`typedef`, `_Generic`, function-level call graph) **and** adds fn-pointer dispatch (+ a
+`ccq.fnptr.json` override for blind spots); fastest repeated queries (warm daemon); lightest
+"smart-tool" footprint (zero-dependency Go binary — best smart option for an intranet); symbol-level
+editing + graph export.
+
+**Weaknesses** ⚠️ — **slowest first index** (needs a real build for `compile_commands.json` + a
+~30s clangd background index; tree-sitter tools index in seconds, cscope in ~0.5s); **depends on an
+external `clangd` binary**; the fn-pointer heuristic is an over-approximation (declare blind spots in
+`ccq.fnptr.json`); **C/C++ only** and **no MCP** out of the box. ccq trades cold-start cost for
+accuracy and mitigates it with the warm daemon and `--incremental`.
+
+Full numbers — features, call-graph recall, **indexing speed vs cscope/ctags/cflow**, install &
+dependency footprint, usage, and per-tool strengths/weaknesses — are in **[docs/benchmark.md](docs/benchmark.md)**.
 
 ## Limitations
 

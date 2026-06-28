@@ -120,11 +120,17 @@ ccq 的设计来自一场 C 代码智能工具的对打 benchmark（完整 harne
 | fn-pointer 分派（F6） | ❌ | ✅ | ⚠️ | ⚠️ | ✅ |
 | 8 项难 C 特性通过 | 2 | 3 | 7 | 7 | **8（唯一）** |
 | redis `lookupCommand` callers | 0 | 13 | 13 | 13 | **13** |
-| 热查询（重复） | 每次重跑 | 每次重跑 | — | 每次重跑 | **~0.07–0.6s** |
-| 符号改名（编辑） | ❌ | ❌ | — | ✅ | ✅ |
-| 依赖足迹 | 自编 | ~188 MB | binary | ~890 包 | **单一 Go binary，0 依赖** |
+| **初次索引 / build** ⚠️ | ~4s | ~11–14s | 需完整 build + 索引 | 需完整 build + 索引 | **需完整 build + ~30s 索引（ccq 最弱项）** |
+| 热重复查询 | 每次重跑 | 每次重跑 | — | 每次重跑 | **~0.07–0.6s** |
+| 编辑 | — | — | rename | ✅ LSP | ✅ rename / replace-body / insert |
+| 集成方式 | MCP | MCP | LSP（编辑器） | MCP | **CLI + agent skill** |
+| 安装足迹（内网） | 257 MB，vendored build | 188 MB Node bundle | ~100–350 MB binary | 🔴 ~890 包 + 下载 clangd | **单一 Go binary，0 Go 依赖**（需 clangd） |
 
-**结论：** ccq 是唯一通过全部 8 项难 C 特性的工具 —— 保留 clangd 的赢面（`#ifdef`、宏、`typedef`、`_Generic`、函数级调用图），再加上 fnptr 启发式（CodeGraph 唯一胜 clangd 的特性）、warm daemon 的速度，并维持零依赖单一 binary。
+**强项** ✅ — 唯一通过全部 8 项难 C 特性；保留 clangd 的赢面（`#ifdef`、宏、`typedef`、`_Generic`、函数级调用图）**并**加上 fn-pointer 分派（+ `ccq.fnptr.json` 对照表补盲区）；重复查询最快（warm daemon）；「智能工具」中足迹最轻（零依赖 Go binary —— 内网最佳智能选项）；符号级编辑 + graph export。
+
+**弱项** ⚠️ — **初次索引最慢**（需真正 build 出 `compile_commands.json` + ~30s clangd 后台索引；tree-sitter 工具数秒、cscope ~0.5s 就好）；**依赖外部 clangd binary**；fn-pointer 启发式是过度近似（盲区请在 `ccq.fnptr.json` 声明）；**仅 C/C++**、**默认无 MCP**。ccq 以冷启动成本换精度，并用 warm daemon 与 `--incremental` 缓解。
+
+完整数据 —— 特性、调用图召回、**索引速度 vs cscope/ctags/cflow**、安装与依赖足迹、使用方式、每个工具的强弱项 —— 都在 **[docs/benchmark.md](docs/benchmark.md)**。
 
 ## 限制（Limitations）
 
