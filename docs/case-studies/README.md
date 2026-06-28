@@ -9,6 +9,7 @@ exercise found (writing a case study is itself a test).
 | Case study | Codebases | What it shows |
 |------------|-----------|---------------|
 | [call-graph-redis-wpa](call-graph-redis-wpa/README.md) | redis, wpa_supplicant | the 3-layer model (grep → clangd → agent tools), `explore`/`callers`/`callees`/`export`, **fn-pointer dispatch** in no-build mode, and an **interactive HTML knowledge graph** — plus 5 real bugs found & fixed |
+| [safe-refactor](safe-refactor/README.md) *(skeleton)* | ctest8, redis | the **editing** dimension (Serena-parity): `impact` → `rename` → `replace-body` — look before you leap, scope-correct rename, symbol-level body rewrite |
 
 ## Layout
 
