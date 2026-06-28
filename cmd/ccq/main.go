@@ -14,7 +14,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/swchen44/ccq/internal/cache"
 	"github.com/swchen44/ccq/internal/cmd"
 	"github.com/swchen44/ccq/internal/compdb"
 	"github.com/swchen44/ccq/internal/config"
@@ -60,6 +62,7 @@ PROJECT:
                           --background returns at once (poll 'ccq status'); --rebuild forces a fresh index
   status                  daemon running? + index mode/file count
   shutdown                stop the warm daemon
+  cache [list|clean|path]   inspect/clean index caches (clean: --all|--project p|--older-than N [--index])
   version
 
 FLAGS:
@@ -191,6 +194,9 @@ func main() {
 		}
 		mcp.Serve(os.Stdin, os.Stdout, runner, root)
 		return
+	case "cache": // inspect / clean ccq + clangd index caches
+		cacheCmd(args)
+		return
 	case "__daemon": // internal: the warm server process
 		ccDir := resolveCompileDB(root, cdbs)
 		maxWait, baseline := cmd.IndexWaits(isBig(root))
@@ -286,6 +292,81 @@ func runInline(root, clangdBin string, req cmd.Request) {
 	}
 }
 
+// cacheCmd implements `ccq cache [list|clean|path]`.
+func cacheCmd(args []string) {
+	sub := ""
+	if len(args) > 0 {
+		sub = args[0]
+	}
+	switch sub {
+	case "path":
+		fmt.Println(cache.Base())
+	case "clean":
+		opts := cache.CleanOpts{All: hasFlag("--all"), Index: hasFlag("--index")}
+		if p := flagVal("--project"); p != "" {
+			opts.Project = absOr(p)
+		}
+		if v := flagVal("--older-than"); v != "" {
+			if d, _ := strconv.Atoi(v); d > 0 {
+				opts.OlderThan = time.Duration(d) * 24 * time.Hour
+			}
+		}
+		if !opts.All && opts.Project == "" && opts.OlderThan == 0 {
+			fmt.Println("nothing selected. use --all | --project <path> | --older-than <days> (add --index to also clear clangd's index).")
+			return
+		}
+		if opts.Index {
+			fmt.Fprintln(os.Stderr, "warning: --index also removes <root>/.cache/clangd — shared with VS Code / your editor's clangd (they will re-index).")
+		}
+		removed := cache.Clean(opts)
+		var total int64
+		for _, e := range removed {
+			total += e.Size
+			fmt.Printf("removed %-13s %s (%s)\n", e.Kind, dispProject(e), humanSize(e.Size))
+		}
+		fmt.Printf("freed %s across %d item(s).\n", humanSize(total), len(removed))
+	default: // list
+		entries := cache.List()
+		if len(entries) == 0 {
+			fmt.Println("no caches yet. (run a query to warm a project.)")
+			return
+		}
+		var total int64
+		fmt.Printf("%-13s %-15s %9s  %-16s  %s\n", "KIND", "MODE", "SIZE", "MODIFIED", "PROJECT")
+		for _, e := range entries {
+			total += e.Size
+			run := ""
+			if e.Running {
+				run = " [running]"
+			}
+			fmt.Printf("%-13s %-15s %9s  %-16s  %s%s\n", e.Kind, e.Mode, humanSize(e.Size),
+				e.Modified.Format("2006-01-02 15:04"), dispProject(e), run)
+		}
+		fmt.Printf("\ntotal: %s. note: clangd-index is shared with editors (VS Code).\n", humanSize(total))
+		fmt.Println("clean: `ccq cache clean --older-than 14` | `--project <p>` | `--all` (add --index for clangd's index).")
+	}
+}
+
+func dispProject(e cache.Entry) string {
+	if e.Project != "" {
+		return e.Project
+	}
+	return e.Dir
+}
+
+func humanSize(b int64) string {
+	switch {
+	case b >= 1<<30:
+		return fmt.Sprintf("%.1fG", float64(b)/(1<<30))
+	case b >= 1<<20:
+		return fmt.Sprintf("%.1fM", float64(b)/(1<<20))
+	case b >= 1<<10:
+		return fmt.Sprintf("%.0fK", float64(b)/(1<<10))
+	default:
+		return fmt.Sprintf("%dB", b)
+	}
+}
+
 // normalize resolves file-path args (symbols command takes a file).
 func normalize(sub string, args []string) []string {
 	if sub == "symbols" && len(args) > 0 {
@@ -317,8 +398,8 @@ func parseFlags(in []string) (args []string, root string, jsonOut bool, clangdBi
 			}
 		case "--no-daemon":
 			noDaemon = true
-		case "--apply", "--incremental", "--rebuild", "--background":
-		case "--format", "--out", "--focus", "--compdb", "--config":
+		case "--apply", "--incremental", "--rebuild", "--background", "--all", "--index":
+		case "--format", "--out", "--focus", "--compdb", "--config", "--project", "--older-than":
 			i++ // value consumed via flagVal
 		default:
 			args = append(args, in[i])
