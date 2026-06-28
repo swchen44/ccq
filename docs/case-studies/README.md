@@ -12,6 +12,11 @@ exercise found (writing a case study is itself a test).
 | [safe-refactor](safe-refactor/README.md) | ctest8 | the **editing** dimension (Serena-parity): `impact` → `rename` → `replace-body` — scope-correct rename, symbol-level body rewrite; found & fixed a warm-daemon staleness bug + documented the macro-body rename limit |
 | [intranet-no-build](intranet-no-build/README.md) | wpa_supplicant | the **air-gapped / no-build** dimension: zero-dependency install, `ccq init` → `compile_flags.txt`, fn-pointer dispatch without a build, the accuracy tradeoff; found & fixed a hidden no-build-warning bug |
 
+## Test rigor
+
+Running these on real repos found **8 real bugs** (all fixed) that the unit/integration suite missed
+— see [bugs-found.md](bugs-found.md). Writing a case study is itself a test.
+
 ## Layout
 
 Each case study is a self-contained folder so they can grow independently:
