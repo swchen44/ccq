@@ -56,7 +56,9 @@ SERVE:
 PROJECT:
   init                    detect/generate compile_commands.json (or compile_flags.txt, no-build)
   config                  show effective settings (ccq.json: allow/deny index filter)
-  status                  is the warm daemon running?
+  wait-index [--background] [--rebuild]   block until the index is ready (agents: run this first);
+                          --background returns at once (poll 'ccq status'); --rebuild forces a fresh index
+  status                  daemon running? + index mode/file count
   shutdown                stop the warm daemon
   version
 
@@ -124,11 +126,41 @@ func main() {
 		fmt.Printf("compile_commands.json: %s (%s)\nclangd: %s\nready. try: ccq explore <symbol>\n", dir, how, clangdBin)
 		return
 	case "status":
-		if out, err := daemon.Ping(root); err == nil {
-			fmt.Println("daemon: running", out)
+		if st, err := daemon.Status(root); err == nil {
+			fmt.Printf("daemon: running — index ready (%s, %d files)\n", st.Mode, st.Files)
+		} else if daemon.IsIndexing(root) {
+			fmt.Println("daemon: indexing… (not ready yet; re-run `ccq status` or `ccq wait-index`)")
 		} else {
 			fmt.Println("daemon: not running")
 		}
+		return
+	case "wait-index": // block until the index is ready (so an agent can query safely)
+		if hasFlag("--rebuild") {
+			daemon.Shutdown(root)
+			cacheDir := filepath.Join(root, ".cache", "clangd")
+			if _, e := os.Stat(cacheDir); e == nil {
+				fmt.Fprintf(os.Stderr, "warning: removing %s — this is clangd's index cache, shared with VS Code / your editor's clangd (they will re-index too).\n", cacheDir)
+				os.RemoveAll(cacheDir)
+			}
+		}
+		if hasFlag("--background") {
+			if err := daemon.Spawn(root, exe, clangdBin, compdbArg, configArg); err != nil {
+				fmt.Println("ERROR:", err)
+				os.Exit(1)
+			}
+			fmt.Println("indexing started in background — poll `ccq status` until ready.")
+			return
+		}
+		st, err := daemon.EnsureReady(root, exe, clangdBin, compdbArg, configArg)
+		if err != nil {
+			fmt.Println("ERROR:", err)
+			os.Exit(1)
+		}
+		note := ""
+		if st.Mode == "no-build" {
+			note = " (no-build: dynamic index, best-effort completion)"
+		}
+		fmt.Printf("index ready: %s, %d files%s\n", st.Mode, st.Files, note)
 		return
 	case "shutdown":
 		daemon.Shutdown(root)

@@ -162,6 +162,22 @@ func TestRegrDaemonSyncAfterApply(t *testing.T) {
 	}
 }
 
+// ccq wait-index blocks until the index is ready and reports the mode; status
+// then shows the daemon running with a file count.
+func TestWaitIndexReady(t *testing.T) {
+	bin := ccqbin(t)
+	proj := copyCproj(t)
+	defer run(t, bin, "shutdown", "-p", proj)
+	out := run(t, bin, "wait-index", "-p", proj)
+	if !strings.Contains(out, "index ready") || !strings.Contains(out, "compile_commands") {
+		t.Errorf("wait-index should report 'index ready ... compile_commands'\n%s", out)
+	}
+	st := run(t, bin, "status", "-p", proj)
+	if !strings.Contains(st, "running") || !strings.Contains(st, "files") {
+		t.Errorf("status after wait-index should show running + files\n%s", st)
+	}
+}
+
 // ccq.json deny filter must exclude matching files from the index (the symbol in
 // a denied file becomes unfindable).
 func TestConfigDenyFilter(t *testing.T) {
