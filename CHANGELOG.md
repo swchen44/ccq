@@ -4,6 +4,17 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Added
+- **`ccq export --format html`** — emit a self-contained, offline, zero-dependency
+  interactive knowledge graph (vanilla-JS force-directed SVG; no CDN). Same idea as
+  CodeGraph's shared HTML graph, driven by the clangd-grade call graph.
+- **`ccq export --focus <sym> [-d N]`** — build just a neighborhood (BFS over
+  callers + callees to depth N) instead of the whole repo; fast on large trees and
+  the recommended path for `--format html`. (Whole-repo export stays for json/sql.)
+### Performance
+- `fnptr.build` is cached per project root, so repeated `callers`/`callees`/`explore`
+  on a warm daemon no longer rescan the whole repo each query (warm `explore` on
+  redis ≈ 0.85s).
 ### Fixed
 - `explore` now computes callees with the same body-scan + fn-pointer logic as the
   standalone `callees` command (it was still using clangd's unreliable `outgoingCalls`
