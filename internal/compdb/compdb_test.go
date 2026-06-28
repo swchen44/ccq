@@ -31,6 +31,11 @@ func TestStageMerge(t *testing.T) {
 	if len(entries) != 2 {
 		t.Errorf("merged should have 2 entries, got %d", len(entries))
 	}
+	// order is preserved (first --compdb first): clangd uses the first entry for a
+	// duplicated file, so b1's entries must precede b2's.
+	if len(entries) == 2 && (entries[0]["file"] != "/x/f.c" || entries[1]["file"] != "/y/g.c") {
+		t.Errorf("Stage must preserve --compdb order (first wins for duplicate files); got %v", entries)
+	}
 	// stable dir for the same input set
 	dir2, _ := Stage([]string{a, b})
 	if dir2 != dir {

@@ -151,9 +151,12 @@ flowchart LR
 
 - **Decoupling**: the compile DB (`--compdb`) and the source root (`-p`) are separate — source
   scanning (OpenAll, fnptr) stays on `-p`, while clangd's flags come from the staged DB.
-- **Merge semantics**: arrays are concatenated. A file built several ways keeps all its entries;
-  clangd picks one per file, so `#ifdef`/`-D` reflects **one** of the configs. For an exact
-  per-config view, pass a single `--compdb` for that build.
+- **Merge semantics & priority**: arrays are concatenated **in `--compdb` order**. A file built
+  several ways keeps all its entries; for a duplicated `file`, clangd silently uses the **first**
+  matching entry (verified empirically — same `dup.c` with `-DCONFIG_A` vs `-DCONFIG_B`: whichever
+  `--compdb` is listed first wins; the other branch is inactive). So **order `--compdb` so the
+  config you want for overlapping files comes first**, or pass a single `--compdb` for an exact
+  per-config view. `compdb.Stage` preserves input order (pinned by `TestStageMerge`).
 - **Daemon scoping**: the daemon socket/state is keyed by `(root, compdb set)` (see
   `daemon.SetKey`). Distinct `--compdb` sets therefore get **distinct warm clangds** — switching
   configs hits a different warm instance with **no re-index** (vs symlinking one
