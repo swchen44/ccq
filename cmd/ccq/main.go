@@ -8,10 +8,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -63,6 +65,7 @@ PROJECT:
   status                  daemon running? + index mode/file count
   shutdown                stop the warm daemon
   cache [list|clean|path]   inspect/clean index caches (clean: --all|--project p|--older-than N [--index])
+  doctor                  dump environment (versions, config, compile DB, caches) for debugging
   version
 
 FLAGS:
@@ -197,6 +200,9 @@ func main() {
 	case "cache": // inspect / clean ccq + clangd index caches
 		cacheCmd(args)
 		return
+	case "doctor": // dump environment for debugging
+		doctorCmd(root, clangdBin, cdbs)
+		return
 	case "__daemon": // internal: the warm server process
 		ccDir := resolveCompileDB(root, cdbs)
 		maxWait, baseline := cmd.IndexWaits(isBig(root))
@@ -290,6 +296,116 @@ func runInline(root, clangdBin string, req cmd.Request) {
 		fmt.Printf("unknown command: %s\n", req.Cmd)
 		os.Exit(1)
 	}
+}
+
+// doctorCmd dumps the environment to help debug setup problems.
+func doctorCmd(root, clangdBin string, cdbs []string) {
+	var hints []string
+	ok := func(b bool) string {
+		if b {
+			return "✓"
+		}
+		return "✗"
+	}
+	fmt.Printf("ccq doctor\n\n")
+	fmt.Printf("  ccq version : %s\n", version)
+	fmt.Printf("  OS / arch   : %s/%s\n", runtime.GOOS, runtime.GOARCH)
+	fmt.Printf("  project (-p): %s\n", root)
+
+	// clangd
+	cpath, cver := clangdInfo(clangdBin)
+	fmt.Printf("  clangd      : %s %s\n", ok(cver != ""), cpath)
+	if cver != "" {
+		fmt.Printf("                %s\n", cver)
+	} else {
+		hints = append(hints, "clangd not found — install it or pass --clangd /path/to/clangd")
+	}
+
+	// config
+	fmt.Printf("\n  config      : ")
+	if config.Source() == "" {
+		fmt.Println("(none) — all files indexed (no allow/deny filter)")
+	} else {
+		s := config.Get()
+		fmt.Printf("%s\n                allow=%v deny=%v fallbackFlags=%v\n", config.Source(), s.Allow, s.Deny, s.FallbackFlags)
+	}
+	for _, w := range config.Warnings() {
+		fmt.Printf("                ✗ %s\n", w)
+		hints = append(hints, "fix the config problem above (ccq.json)")
+	}
+
+	// compile database
+	ccDir := resolveCompileDB(root, cdbs)
+	mode, entries := compileDBInfo(root, ccDir, cdbs)
+	fmt.Printf("\n  compile DB  : %s %s", ok(mode != "none"), mode)
+	if entries >= 0 {
+		fmt.Printf(" (%d entries)", entries)
+	}
+	if len(cdbs) > 0 {
+		fmt.Printf(" via --compdb %v", cdbs)
+	}
+	fmt.Println()
+	switch mode {
+	case "none":
+		hints = append(hints, "no compile database — run `ccq init`, or pass --compdb; navigation works but accuracy is degraded")
+	case "no-build":
+		hints = append(hints, "no-build mode (compile_flags.txt) — accuracy is lower than a real build (#ifdef over-included, no -D)")
+	}
+
+	// caches (this project + totals)
+	var ccqTotal, clangdHere int64
+	for _, e := range cache.List() {
+		ccqTotal += e.Size
+		if e.Kind == "clangd-index" && e.Project == root {
+			clangdHere = e.Size
+		}
+	}
+	fmt.Printf("\n  cache (ccq) : %s total at %s\n", humanSize(ccqTotal), cache.Base())
+	fmt.Printf("  clangd index: %s at %s/.cache/clangd  (shared with VS Code / editor clangd)\n", humanSize(clangdHere), root)
+
+	// daemon
+	if st, err := daemon.Status(root); err == nil {
+		fmt.Printf("  daemon      : running — index ready (%s, %d files)\n", st.Mode, st.Files)
+	} else if daemon.IsIndexing(root) {
+		fmt.Printf("  daemon      : indexing…\n")
+	} else {
+		fmt.Printf("  daemon      : not running\n")
+	}
+
+	if len(hints) > 0 {
+		fmt.Println("\nhints:")
+		for _, h := range hints {
+			fmt.Printf("  • %s\n", h)
+		}
+	}
+}
+
+func clangdInfo(clangdBin string) (path, version string) {
+	path = resolveClangd(clangdBin)
+	out, err := exec.Command(path, "--version").Output()
+	if err != nil {
+		return path, ""
+	}
+	return path, strings.SplitN(strings.TrimSpace(string(out)), "\n", 2)[0]
+}
+
+// compileDBInfo returns the index mode and entry count (-1 if not countable).
+func compileDBInfo(root, ccDir string, cdbs []string) (mode string, entries int) {
+	entries = -1
+	if ccDir != "" {
+		if b, err := os.ReadFile(filepath.Join(ccDir, "compile_commands.json")); err == nil {
+			mode = "compile_commands"
+			var arr []json.RawMessage
+			if json.Unmarshal(b, &arr) == nil {
+				entries = len(arr)
+			}
+			return
+		}
+	}
+	if compdb.IsNoBuild(root) {
+		return "no-build", -1
+	}
+	return "none", -1
 }
 
 // cacheCmd implements `ccq cache [list|clean|path]`.

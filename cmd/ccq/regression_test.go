@@ -162,6 +162,18 @@ func TestRegrDaemonSyncAfterApply(t *testing.T) {
 	}
 }
 
+// ccq doctor reports versions, the compile database, and config.
+func TestDoctor(t *testing.T) {
+	bin := ccqbin(t)
+	proj := cproj(t)
+	out := run(t, bin, "doctor", "-p", proj)
+	for _, want := range []string{"ccq version", "clangd", "compile_commands", "cache"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("doctor output missing %q\n%s", want, out)
+		}
+	}
+}
+
 // ccq wait-index blocks until the index is ready and reports the mode; status
 // then shows the daemon running with a file count.
 func TestWaitIndexReady(t *testing.T) {
