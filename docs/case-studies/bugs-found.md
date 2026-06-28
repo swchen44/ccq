@@ -21,6 +21,25 @@ daemon-lifecycle** issues that only appear when you drive real repos end-to-end.
 | 7 | After `rename --apply`, the same daemon returned `callers <new>` = **(none)** and `replace-body <new>` = **not found** | apply wrote files on disk but didn't tell clangd; the warm index was pre-edit | re-sync clangd (`didChange`) + drop fnptr cache after apply · [`61b580d`](https://github.com/swchen44/ccq/commit/61b580d) | safe-refactor (ctest8) |
 | 8 | No-build / degraded **warning hidden** in the default daemon path | the note printed only on the `--no-daemon` inline path | warn for every query, daemon + inline · [`8fec1e5`](https://github.com/swchen44/ccq/commit/8fec1e5) | intranet-no-build (wpa) |
 
+## Regression tests — each bug is now pinned
+
+Every bug above has a test so it can't silently come back (`go test ./...` for unit,
+`go test -tags integration ./...` for the rest):
+
+| # | Regression test |
+|---|-----------------|
+| 1 | `TestRegrCalleesBodyScan` (integration) |
+| 2 | `TestRegrDefShowsDefinition` (integration) |
+| 3 | `TestBuildCachedAndInvalidate` (unit · `internal/fnptr`) |
+| 4 | `TestRegrExportFocus` (integration) |
+| 5 | `TestWriteHTMLNodeIDFix` (unit · `internal/cmd`) |
+| 6 | `TestRegrSymbolsLineNumbers` (integration) |
+| 7 | `TestRegrDaemonSyncAfterApply` (integration · exercises the warm daemon) |
+| 8 | `TestRegrNoBuildWarningInDaemon` (integration) |
+
+The integration ones live in `cmd/ccq/regression_test.go`; they build ccq once and drive it over a
+real clangd, mirroring how the bugs were found.
+
 ## Why unit tests missed them
 
 These cluster into three areas that a unit test on a fixture won't catch:

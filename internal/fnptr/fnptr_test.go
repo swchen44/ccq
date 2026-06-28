@@ -82,6 +82,22 @@ func TestCalleesReverse(t *testing.T) {
 	}
 }
 
+// TestBuildCachedAndInvalidate is the regression test for bug #3 (fnptr.build
+// rescanned the whole repo on every query). build must return the same cached
+// *index for the same root, and Invalidate must force a fresh build.
+func TestBuildCachedAndInvalidate(t *testing.T) {
+	Invalidate()
+	a := build(dir)
+	b := build(dir)
+	if a != b {
+		t.Error("build should return the cached *index on repeated calls (same root)")
+	}
+	Invalidate()
+	if build(dir) == a {
+		t.Error("Invalidate should force a fresh build (new *index)")
+	}
+}
+
 // TestUnknownHandlerNoPanic: a handler that is registered nowhere yields nil.
 func TestUnknownHandlerNoPanic(t *testing.T) {
 	if c := Callers(dir, "does_not_exist"); c != nil {

@@ -70,3 +70,21 @@ func TestWriteSQL(t *testing.T) {
 		}
 	}
 }
+
+// TestWriteHTMLNodeIDFix is the regression test for bug #5: the graph template
+// keys nodes by n.id, but exNode serializes as "name" — without the
+// n.id=n.id||n.name normalization the rendered graph is empty.
+func TestWriteHTMLNodeIDFix(t *testing.T) {
+	var b strings.Builder
+	writeHTML(&b, []exNode{{Name: "foo", Kind: "function"}},
+		[]exEdge{{Src: "bar", Dst: "foo", Kind: "fnptr"}}, "foo")
+	out := b.String()
+	if !strings.Contains(out, "n.id=n.id||n.name") {
+		t.Error("writeHTML must normalize node id from name, or the graph renders empty")
+	}
+	for _, want := range []string{`"name":"foo"`, `"focus":"foo"`, `"kind":"fnptr"`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("html payload missing %q", want)
+		}
+	}
+}
