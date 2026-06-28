@@ -274,6 +274,9 @@ make fmt               # gofmt -w .
   PATH.
 - CI (`.github/workflows/ci.yml`) runs gofmt check, `go vet`, golangci-lint, unit tests,
   integration tests (installs clangd), and cross-compiles all platforms on every push/PR.
+- Beyond the suite, the [case studies](docs/case-studies/) run ccq on real repos (redis,
+  wpa_supplicant) — that **found & fixed 8 real bugs** the unit tests missed
+  ([bugs-found.md](docs/case-studies/bugs-found.md)). Writing a case study is itself a test.
 
 ### Release process & versions
 - **Stable**: `git tag vX.Y.Z && git push origin vX.Y.Z` → `release.yml` builds all platforms
