@@ -18,6 +18,7 @@ import (
 	"github.com/swchen44/ccq/internal/compdb"
 	"github.com/swchen44/ccq/internal/daemon"
 	"github.com/swchen44/ccq/internal/lsp"
+	"github.com/swchen44/ccq/internal/mcp"
 )
 
 const usage = `ccq — clangd-powered C/C++ code intelligence for agents
@@ -44,6 +45,9 @@ EDIT (symbol-level, Serena-parity; dry-run unless --apply):
 EXPORT (query with your own tools):
   export [--format json|sql] [--out f]   dump symbols + call graph
   fnptr                   validate the fn-pointer override table (ccq.fnptr.json)
+
+SERVE:
+  mcp                     serve ccq over the Model Context Protocol (stdio); tools: explore/callers/...
 
 PROJECT:
   init                    detect/generate compile_commands.json (or compile_flags.txt, no-build)
@@ -111,6 +115,18 @@ func main() {
 	case "shutdown":
 		daemon.Shutdown(root)
 		fmt.Println("daemon: stopped")
+		return
+	case "mcp": // serve ccq over the Model Context Protocol (JSON-RPC/stdio)
+		runner := func(sub, arg, croot string) (string, error) {
+			if croot == "" {
+				croot = root
+			}
+			croot = absOr(croot)
+			cd := resolveClangd(clangdBin)
+			req := cmd.Request{Cmd: sub, Args: []string{arg}, Depth: 3}
+			return daemon.Query(croot, exe, cd, req)
+		}
+		mcp.Serve(os.Stdin, os.Stdout, runner, root)
 		return
 	case "__daemon": // internal: the warm server process
 		ccDir := compdb.Locate(root)
