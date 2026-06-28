@@ -12,6 +12,7 @@ ccq callers lookupCommand      # who calls it (function-level, cross-file)
 ccq explore processCommand     # source + callers + callees + blast-radius, one shot
 ccq impact ssl_init -d 3        # transitive blast radius
 ccq rename old_name new_name --apply   # safe symbol-level rename across the repo
+ccq export --format html --focus lookupCommand --out graph.html   # interactive knowledge graph (offline, zero-dep)
 ```
 
 ## Motivation
@@ -238,7 +239,7 @@ Build once (`go build -o ccq ./cmd/ccq`, no network needed), copy the single bin
 
 ## For Developers
 
-> Docs: [case-study.md](docs/case-study.md) (worked example + graphs, shown not told) ·
+> Docs: [case studies](docs/case-studies/) (worked examples + graphs, shown not told) ·
 > [design.md](docs/design.md) · [requirement.md](docs/requirement.md) · [benchmark.md](docs/benchmark.md)
 
 ### Setup & build
@@ -306,8 +307,8 @@ Full notes: [CHANGELOG.md](CHANGELOG.md). Latest binaries: [Releases](https://gi
 - [x] fn-pointer override table (`ccq.fnptr.json`) for blind spots — *done in 0.4*
 - [x] **full git-diff incremental** (`--incremental`) — open *only* changed files on warm restart;
       query path opens targets on demand. ~2.4× faster cold start on redis, identical results — *done in 0.5 (opt-in)*
-- [ ] Scoped / parallel `ccq export` — whole-repo export is slow on large trees (use a focused neighborhood meanwhile; see [case study](docs/case-study.md))
-- [ ] `ccq export --format html` — emit the interactive graph directly (the case study ships a `make_graph.py` generator for now)
+- [x] Scoped `ccq export --focus <sym>` — neighborhood instead of whole-repo (fast on large trees) — *done; parallel whole-repo export still TODO*
+- [x] `ccq export --format html` — emit the interactive graph directly — *done; see [case studies](docs/case-studies/)*
 - [ ] More build systems (Bazel, xmake) for `ccq init`
 - [ ] fn-pointer heuristic: positional-table edge cases, comment-aware multi-line registrations
 

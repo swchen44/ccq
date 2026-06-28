@@ -6,8 +6,8 @@ way the author was convinced. Everything below is **real ccq output**, and §7 l
 this very exercise found and fixed**.
 
 > Two interactive, offline, zero-dependency knowledge graphs are generated from this data:
-> [`redis-callgraph.html`](case-study/redis-callgraph.html) and
-> [`wpa-fnptr-graph.html`](case-study/wpa-fnptr-graph.html) (open in any browser — no server, no CDN).
+> [`redis-callgraph.html`](redis-callgraph.html) and
+> [`wpa-fnptr-graph.html`](wpa-fnptr-graph.html) (open in any browser — no server, no CDN).
 
 ---
 
@@ -117,7 +117,7 @@ flowchart LR
 ```
 `ccq export --format sql | sqlite3 g.db` then query with plain SQL — a zero-dependency substitute for
 CodeGraph's Cypher. **An interactive HTML view of the real neighborhood (33 nodes) is in
-[`case-study/redis-callgraph.html`](case-study/redis-callgraph.html).**
+[`case-study/redis-callgraph.html`](redis-callgraph.html).**
 
 ---
 
@@ -153,8 +153,8 @@ flowchart LR
 
 The dotted edges are **synthesized** from `(struct, field) = (wpa_driver_ops, scan2)` registrations +
 dispatch sites — exactly the gap CodeGraph beats clangd on, recovered here **without a build**, with
-the registration site cited. Interactive view: [`case-study/wpa-fnptr-graph.html`](case-study/wpa-fnptr-graph.html).
-For blind spots the text scan can't infer, a [`ccq.fnptr.json`](../README.md#differentiators) override
+the registration site cited. Interactive view: [`case-study/wpa-fnptr-graph.html`](wpa-fnptr-graph.html).
+For blind spots the text scan can't infer, a [`ccq.fnptr.json`](../../../README.md#differentiators) override
 table adds ground-truth edges.
 
 ---
@@ -172,7 +172,7 @@ open graph.html       # drag nodes, hover to isolate a neighborhood; fn-pointer 
 ```
 
 The HTML files in this folder were produced exactly this way. (A standalone
-[`make_graph.py`](case-study/make_graph.py) is also kept, for turning an existing
+[`make_graph.py`](make_graph.py) is also kept, for turning an existing
 `ccq export --format json` dump into the same graph.) This is the same idea as the CodeGraph HTML
 knowledge graph people share — but driven by a **compiler-grade** engine and a **single
 zero-dependency binary**.
@@ -218,4 +218,4 @@ ccq init -p repos/wpa_supplicant
 ccq callers wpa_driver_wext_scan -p repos/wpa_supplicant
 ccq export --format html --focus wpa_driver_wext_scan -p repos/wpa_supplicant --out wpa.html
 ```
-Benchmark numbers and methodology: [benchmark.md](benchmark.md). Design: [design.md](design.md).
+Benchmark numbers and methodology: [benchmark.md](../../benchmark.md). Design: [design.md](../../design.md).

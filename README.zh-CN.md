@@ -12,6 +12,7 @@ ccq callers lookupCommand      # 谁调用它（函数级、跨文件）
 ccq explore processCommand     # 一次给：源码 + callers + callees + blast-radius
 ccq impact ssl_init -d 3        # 传递影响范围
 ccq rename old_name new_name --apply   # 跨项目安全的符号级改名
+ccq export --format html --focus lookupCommand --out graph.html   # 交互知识图（离线、零依赖）
 ```
 
 ## 动机
@@ -180,7 +181,7 @@ tar xzf ccq-linux-amd64.tar.gz && cd ccq-linux-amd64 && ./install.sh
 
 ## For Developers（开发者手册）
 
-> 文档：[case-study.md](docs/case-study.md)（实例 + 图,用看的不用听的）· [design.md](docs/design.md) · [requirement.md](docs/requirement.md) · [benchmark.md](docs/benchmark.md)
+> 文档：[case studies](docs/case-studies/)（实例 + 图,用看的不用听的）· [design.md](docs/design.md) · [requirement.md](docs/requirement.md) · [benchmark.md](docs/benchmark.md)
 
 ### 环境与编译
 ```bash
