@@ -227,8 +227,8 @@ Build once (`go build -o ccq ./cmd/ccq`, no network needed), copy the single bin
 
 ## For Developers
 
-> Full design & requirements: [docs/design.md](docs/design.md) ·
-> [docs/requirement.md](docs/requirement.md) · [docs/benchmark.md](docs/benchmark.md)
+> Docs: [case-study.md](docs/case-study.md) (worked example + graphs, shown not told) ·
+> [design.md](docs/design.md) · [requirement.md](docs/requirement.md) · [benchmark.md](docs/benchmark.md)
 
 ### Setup & build
 ```bash
@@ -295,6 +295,8 @@ Full notes: [CHANGELOG.md](CHANGELOG.md). Latest binaries: [Releases](https://gi
 - [x] fn-pointer override table (`ccq.fnptr.json`) for blind spots — *done in 0.4*
 - [x] **full git-diff incremental** (`--incremental`) — open *only* changed files on warm restart;
       query path opens targets on demand. ~2.4× faster cold start on redis, identical results — *done in 0.5 (opt-in)*
+- [ ] Scoped / parallel `ccq export` — whole-repo export is slow on large trees (use a focused neighborhood meanwhile; see [case study](docs/case-study.md))
+- [ ] `ccq export --format html` — emit the interactive graph directly (the case study ships a `make_graph.py` generator for now)
 - [ ] More build systems (Bazel, xmake) for `ccq init`
 - [ ] fn-pointer heuristic: positional-table edge cases, comment-aware multi-line registrations
 

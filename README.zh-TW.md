@@ -175,7 +175,7 @@ tar xzf ccq-linux-amd64.tar.gz && cd ccq-linux-amd64 && ./install.sh
 
 ## For Developers（開發者手冊）
 
-> 完整設計與需求：[docs/design.md](docs/design.md) · [docs/requirement.md](docs/requirement.md) · [docs/benchmark.md](docs/benchmark.md)
+> 文件：[case-study.md](docs/case-study.md)（實例 + 圖,用看的不用聽的）· [design.md](docs/design.md) · [requirement.md](docs/requirement.md) · [benchmark.md](docs/benchmark.md)
 
 ### 環境與編譯
 ```bash
