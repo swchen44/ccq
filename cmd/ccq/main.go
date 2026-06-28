@@ -179,7 +179,7 @@ func main() {
 		} else {
 			fmt.Printf("config: %s\n", config.Source())
 			s := config.Get()
-			fmt.Printf("  allow: %v\n  deny:  %v\n  fallbackFlags: %v\n", s.Allow, s.Deny, s.FallbackFlags)
+			fmt.Printf("  allow: %v\n  deny:  %v\n", s.Allow, s.Deny)
 		}
 		for _, w := range config.Warnings() {
 			fmt.Fprintf(os.Stderr, "  warning: %s\n", w)
@@ -327,7 +327,7 @@ func doctorCmd(root, clangdBin string, cdbs []string) {
 		fmt.Println("(none) — all files indexed (no allow/deny filter)")
 	} else {
 		s := config.Get()
-		fmt.Printf("%s\n                allow=%v deny=%v fallbackFlags=%v\n", config.Source(), s.Allow, s.Deny, s.FallbackFlags)
+		fmt.Printf("%s\n                allow=%v deny=%v\n", config.Source(), s.Allow, s.Deny)
 	}
 	for _, w := range config.Warnings() {
 		fmt.Printf("                ✗ %s\n", w)

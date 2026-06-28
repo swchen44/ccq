@@ -20,9 +20,8 @@ import (
 
 // Settings is the on-disk schema (ccq.json).
 type Settings struct {
-	Allow         []string `json:"allow"`         // if non-empty, index only files matching one
-	Deny          []string `json:"deny"`          // files matching any are excluded
-	FallbackFlags bool     `json:"fallbackFlags"` // give non-compile_commands files the no-build -I flags
+	Allow []string `json:"allow"` // if non-empty, index only files matching one
+	Deny  []string `json:"deny"`  // files matching any are excluded
 }
 
 var (
@@ -121,9 +120,6 @@ func Get() Settings { return raw }
 
 // Warnings returns any load/parse/regex problems (for `ccq config` / `doctor`).
 func Warnings() []string { return warnings }
-
-// FallbackFlags reports the no-build fallback toggle.
-func FallbackFlags() bool { return raw.FallbackFlags }
 
 // Key is a stable identity of the active settings (source path + content hash),
 // used to scope the warm daemon so a different filter gets a different clangd.
