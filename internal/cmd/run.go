@@ -337,6 +337,15 @@ func (c *Ctx) Callees(name string) {
 	}
 }
 
+// syncAfterEdit re-syncs clangd with the files an apply just changed and drops the
+// fn-pointer cache, so a warm daemon doesn't keep serving pre-edit results.
+func (c *Ctx) syncAfterEdit(edits map[string][]textEdit) {
+	for f := range edits {
+		c.Client.Reload(f)
+	}
+	fnptr.Invalidate()
+}
+
 func hasExactFunc(syms []lsp.SymbolInfo, name string) bool {
 	for _, s := range syms {
 		if s.Name == name && isFuncKind(s.Kind) {
@@ -476,6 +485,7 @@ func (c *Ctx) Rename(name, newName string, apply bool) {
 			fmt.Fprintf(c.Out, "apply failed: %v\n", err)
 			return
 		}
+		c.syncAfterEdit(edits)
 		fmt.Fprintf(c.Out, "applied %d edits.\n", n)
 	} else {
 		fmt.Fprintln(c.Out, "(dry-run; pass --apply to write changes)")
@@ -600,6 +610,7 @@ func (c *Ctx) applyOrPreview(label string, edits map[string][]textEdit, apply bo
 		c.emit(map[string]any{"op": label, "edits": edits, "applied": apply})
 		if apply {
 			applyEdits(edits)
+			c.syncAfterEdit(edits)
 		}
 		return
 	}
@@ -613,6 +624,7 @@ func (c *Ctx) applyOrPreview(label string, edits map[string][]textEdit, apply bo
 			fmt.Fprintf(c.Out, "apply failed: %v\n", err)
 			return
 		}
+		c.syncAfterEdit(edits)
 		fmt.Fprintf(c.Out, "applied %d edit(s).\n", n)
 	} else {
 		fmt.Fprintln(c.Out, "(dry-run; pass --apply to write changes)")

@@ -26,6 +26,7 @@ type Client struct {
 	nextID   int
 	pending  map[int]chan json.RawMessage
 	opened   map[string]bool
+	ver      map[string]int
 	idxMu    sync.Mutex
 	idxBegan bool
 	idxEnded bool
@@ -99,6 +100,7 @@ func Start(clangdBin, root, compileCommandsDir string) (*Client, error) {
 		root:    root,
 		pending: map[int]chan json.RawMessage{},
 		opened:  map[string]bool{},
+		ver:     map[string]int{},
 	}
 	go c.readLoop()
 	if err := c.initialize(); err != nil {
@@ -318,6 +320,27 @@ func (c *Client) Open(file string) error {
 		},
 	}, true)
 	c.opened[file] = true
+	c.ver[file] = 1
+	return nil
+}
+
+// Reload re-syncs clangd with the on-disk content of file after an external edit
+// (rename/replace-body/insert --apply). Without this, a warm daemon keeps serving
+// the pre-edit index. If the file was open, send a full-text didChange with a bumped
+// version; otherwise open it fresh.
+func (c *Client) Reload(file string) error {
+	if !c.opened[file] {
+		return c.Open(file)
+	}
+	text, err := readFile(file)
+	if err != nil {
+		return err
+	}
+	c.ver[file]++
+	c.send("textDocument/didChange", map[string]any{
+		"textDocument":   map[string]any{"uri": pathToURI(file), "version": c.ver[file]},
+		"contentChanges": []map[string]any{{"text": text}},
+	}, true)
 	return nil
 }
 

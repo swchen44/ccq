@@ -4,6 +4,12 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Fixed
+- **Warm daemon served stale results after `--apply` edits** — `rename`/`replace-body`/`insert`
+  wrote files on disk but didn't tell clangd, so the next query on the same daemon missed the new
+  symbol (e.g. `callers <newName>` returned `(none)`, `replace-body <newName>` said "not found").
+  After an apply, ccq now re-syncs clangd (`textDocument/didChange`) for the changed files and drops
+  the fn-pointer cache. (Found while writing the safe-refactor case study.)
 ### Added
 - **`ccq export --format html`** — emit a self-contained, offline, zero-dependency
   interactive knowledge graph (vanilla-JS force-directed SVG; no CDN). Same idea as
