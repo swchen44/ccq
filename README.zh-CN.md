@@ -149,6 +149,7 @@ ccq 刻意只是 clangd 之上的薄层；它继承 clangd 的强项，也有几
 - **无 build 模式精度** — `compile_flags.txt` 让你不用 build 也能跨文件，但用猜的 include 且无 `-D`：`#ifdef` 分支会过度涵盖、依赖宏的代码可能错。要 config 精准请用真的 `compile_commands.json`。
 - **冷启动与规模** — 第一次查询会启动 daemon 并索引整个 repo（redis 约 ~30s）；clangd 索引也吃与 repo 大小成正比的内存。热查询亚秒。有持久化索引时,`--incremental` 只开 git 变动的文件（热重启约快 2.4×）；在验证稳定前为 opt-in,默认仍走完整 OpenAll。
 - **依赖 / 范围** — 需要 `clangd` binary（引擎），且为了最佳精度需要 compile database。**仅 C/C++**（跨语言广度是 cbm 这类 tree-sitter 工具的领域）。
+- **多份 compile DB（`--compdb`）** — clangd 对同一文件只取**一条** entry,所以当一个文件被多个 target 用不同 `-D` 编译时,**排第一的 `--compdb` 胜出**,其他 config 的 `#ifdef` 分支会 inactive。请据此排序 `--compdb`,或逐 target 各查一份 `--compdb` 取精确视图。实例:[docs/case-studies/multi-target-compdb](docs/case-studies/multi-target-compdb/README.md)。
 
 ## 发布 / 分发（给别人用）
 

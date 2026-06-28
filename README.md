@@ -201,6 +201,10 @@ ccq is deliberately a thin layer over clangd; it inherits clangd's strengths and
   proves out, full `OpenAll` stays the default.
 - **Dependencies / scope** — needs a `clangd` binary (the engine) and, for best accuracy, a compile
   database. **C/C++ only** by design (cross-language breadth is what tree-sitter tools like cbm are for).
+- **Multiple compile DBs (`--compdb`)** — clangd uses **one** entry per file, so when a file is shared
+  across targets with different `-D`, the **first `--compdb` listed wins** and the other configs'
+  `#ifdef` branches go inactive. Order `--compdb` accordingly, or query one `--compdb` per target for
+  an exact view. Worked example: [docs/case-studies/multi-target-compdb](docs/case-studies/multi-target-compdb/README.md).
 
 ## Release / distribution (giving ccq to others)
 

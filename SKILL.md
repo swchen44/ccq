@@ -25,6 +25,8 @@ description: Use when navigating, understanding, or refactoring a C/C++ codebase
 ## First time in a repo
 Run `ccq init` once — it locates or generates `compile_commands.json` (CMake/Meson/bear) and warms clangd. Without it, ccq runs in degraded (same-file) mode.
 
+If the project builds **several targets** and has **multiple / renamed `compile_commands.json`**, point ccq at them: `ccq callers foo --compdb build1.json,build2.json` (any names; auto-merged). For a file shared across targets with different `-D`, the **first `--compdb` listed wins**; query a single `--compdb` per target for that target's exact `#ifdef` view (each gets its own warm clangd).
+
 ## Usage
 ```
 ccq <command> [args] [-p <project-dir>] [--json]
