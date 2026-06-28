@@ -37,5 +37,6 @@ ccq <command> [args] [-p <project-dir>] [--json]
 ## Guidance for agents
 - Prefer **one `ccq explore X`** over multiple grep/Read — it returns source + callers + callees + blast-radius in a single call (token-efficient).
 - The first command in a cold repo waits for clangd to index (a few seconds); subsequent calls are fast (cached).
+- On a large repo with a persisted clangd index, add `--incremental` to make a warm daemon restart open only git-changed files (~2.4× faster start, same results).
 - For C/C++, trust ccq's call graph over text search: indirect/macro-hidden/typedef'd calls that grep misses are resolved here.
 - `rename` is **dry-run by default**; only pass `--apply` once the edit list looks right.

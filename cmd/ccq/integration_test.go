@@ -84,6 +84,42 @@ func TestCCQReplaceBodyEndToEnd(t *testing.T) {
 	}
 }
 
+// Incremental mode must return the SAME callers as full mode — the query path
+// opens target files on demand, so correctness holds whether or not OpenAll ran.
+func TestCCQIncrementalEndToEnd(t *testing.T) {
+	if _, err := exec.LookPath("clangd"); err != nil {
+		t.Skip("clangd not on PATH; skipping integration test")
+	}
+	proj, _ := filepath.Abs("testdata/cproj")
+	type entry struct {
+		Directory string `json:"directory"`
+		Command   string `json:"command"`
+		File      string `json:"file"`
+	}
+	var db []entry
+	for _, f := range []string{"lib.c", "main.c"} {
+		db = append(db, entry{proj, "clang -std=c11 -c " + f, filepath.Join(proj, f)})
+	}
+	b, _ := json.MarshalIndent(db, "", " ")
+	os.WriteFile(filepath.Join(proj, "compile_commands.json"), b, 0o644)
+
+	bin := filepath.Join(t.TempDir(), "ccq")
+	if out, err := exec.Command("go", "build", "-o", bin, ".").CombinedOutput(); err != nil {
+		t.Fatalf("build: %v\n%s", err, out)
+	}
+	// warm up so clangd persists a static index, then query incrementally.
+	exec.Command(bin, "callers", "add", "-p", proj, "--no-daemon").Run()
+	out, err := exec.Command(bin, "callers", "add", "-p", proj, "--incremental").CombinedOutput()
+	if err != nil {
+		t.Fatalf("incremental callers: %v\n%s", err, out)
+	}
+	for _, want := range []string{"caller_one", "caller_two"} {
+		if !strings.Contains(string(out), want) {
+			t.Errorf("incremental callers of add missing %q\n%s", want, out)
+		}
+	}
+}
+
 func TestCCQSearchEndToEnd(t *testing.T) {
 	if _, err := exec.LookPath("clangd"); err != nil {
 		t.Skip("clangd not on PATH; skipping integration test")

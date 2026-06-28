@@ -134,7 +134,7 @@ ccq 刻意只是 clangd 之上的薄層；它繼承 clangd 的強項，也有幾
 - **callees** — clangd 的 `outgoingCalls` 不可靠，所以 `callees` 會 union 函式體掃描（呼叫點對照符號索引驗證）+ fnptr 分派目標。body-scan 仍可能漏掉藏在巨集後的呼叫。
 - **callback / 事件分派** — 「先註冊、之後呼叫」流程（eloop/timer/signal）不被解析 —— 這是所有靜態工具（含 cscope、clangd）的共同盲區。
 - **無 build 模式精度** — `compile_flags.txt` 讓你不用 build 也能跨檔，但用猜的 include 且無 `-D`：`#ifdef` 分支會過度涵蓋、依賴巨集的碼可能錯。要 config 精準請用真的 `compile_commands.json`。
-- **冷啟動與規模** — 第一次查詢會啟動 daemon 並索引整個 repo（redis 約 ~30s）；clangd 索引也吃與 repo 大小成正比的記憶體。暖查詢則亞秒。暖重啟會優先重新索引變動的檔。（完整「只開變動檔」模式列在 v0.5 roadmap。）
+- **冷啟動與規模** — 第一次查詢會啟動 daemon 並索引整個 repo（redis 約 ~30s）；clangd 索引也吃與 repo 大小成正比的記憶體。暖查詢亞秒。有持久化索引時,`--incremental` 只開 git 變動的檔(暖重啟約快 2.4×);在驗證穩定前為 opt-in,預設仍走完整 OpenAll。
 - **相依 / 範圍** — 需要 `clangd` binary（引擎），且為了最佳精度需要 compile database。**僅 C/C++**（跨語言廣度是 cbm 這類 tree-sitter 工具的領域）。
 
 ## 釋出 / 散布（給別人用）
@@ -213,7 +213,8 @@ make fmt               # gofmt -w .
 
 | 版本 | 日期 | 重點 |
 |------|------|------|
-| [**0.4.0**](https://github.com/swchen44/ccq/releases/tag/v0.4.0) | 2026-06-28 | fn-pointer 對照表、replace-body/insert、callees body-scan 修正、git-diff 暖重啟 |
+| [**0.5.0**](https://github.com/swchen44/ccq/releases/tag/v0.5.0) | 2026-06-28 | --incremental 懶開索引(只開變動檔;暖重啟 ~2.4× 快,opt-in) |
+| [0.4.0](https://github.com/swchen44/ccq/releases/tag/v0.4.0) | 2026-06-28 | fn-pointer 對照表、replace-body/insert、callees body-scan 修正、git-diff 暖重啟 |
 | [0.3.0](https://github.com/swchen44/ccq/releases/tag/v0.3.0)（首個公開版） | 2026-06-27 | fnptr 升級（複合鍵、positional、field←field）、no-build 模式、巨集搜尋、graph export |
 | 0.2.0（里程碑） | 2026-06-26 | warm-clangd daemon（亞秒暖查詢） |
 | 0.1.0（里程碑） | 2026-06-26 | 導航 + rename + fnptr 啟發式 |
@@ -225,7 +226,7 @@ make fmt               # gofmt -w .
 - [x] `callees` 改用函式體掃描（clangd 的 `outgoingCalls` 不可靠；改從函式體建）— 0.4 完成
 - [x] 更多編輯：`replace-body`、`insert-before/after`（對標 Serena）— 0.4 完成
 - [x] fn-pointer 對照表（`ccq.fnptr.json`）補盲區 — 0.4 完成
-- [ ] **v0.5: 完整 git-diff 增量** — 暖重啟只開變動的檔（需 open-on-demand 的 query path；0.4 已出安全版：變動檔優先 + 縮短索引等待）
+- [x] **完整 git-diff 增量**（`--incremental`）— 暖重啟只開變動的檔;query path 按需開目標檔。redis 冷啟動約快 2.4×、結果一致 — *0.5 完成（opt-in）*
 - [ ] `ccq init` 支援更多 build 系統（Bazel、xmake）
 - [ ] fnptr 啟發式：positional table 邊界、註解感知的多行註冊
 

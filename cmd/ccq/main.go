@@ -57,9 +57,10 @@ FLAGS:
   --clangd <p>  clangd binary (default: clangd on PATH)
   -d <n>        depth for impact
   --no-daemon   run clangd inline (no warm daemon)
+  --incremental warm restart opens only git-changed files (needs a persisted clangd index)
 `
 
-const version = "ccq 0.4.0"
+const version = "ccq 0.5.0"
 
 var queryCmds = map[string]bool{
 	"search": true, "def": true, "show": true, "refs": true, "usages": true,
@@ -78,6 +79,11 @@ func main() {
 	format, outPath := flagVal("--format"), flagVal("--out")
 	root = absOr(root)
 	clangdBin = resolveClangd(clangdBin)
+	// --incremental: open only changed files on a warm daemon (set via env so the
+	// spawned daemon process inherits it). Requires a persisted clangd index.
+	if hasFlag("--incremental") {
+		os.Setenv("CCQ_INCREMENTAL", "1")
+	}
 	exe, _ := os.Executable()
 
 	switch sub {
@@ -194,7 +200,7 @@ func parseFlags(in []string) (args []string, root string, jsonOut bool, clangdBi
 			}
 		case "--no-daemon":
 			noDaemon = true
-		case "--apply":
+		case "--apply", "--incremental":
 		case "--format", "--out":
 			i++ // value consumed via flagVal
 		default:

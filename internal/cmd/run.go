@@ -131,6 +131,10 @@ func (c *Ctx) resolveSymbol(name string) (file string, pos lsp.Position, ok bool
 		return "", lsp.Position{}, false
 	}
 	f := lsp.URIToPath(best.Location.URI)
+	// ensure the file is open so subsequent textDocument requests (call hierarchy,
+	// definition, hover) work even in incremental mode where OpenAll was skipped.
+	// clangd serializes per-file, so a request right after didOpen waits for the AST.
+	c.Client.Open(f)
 	p := best.Location.Range.Start
 	// clangd's workspace/symbol range may start at the declaration (e.g. the
 	// return type), not the name. call hierarchy / definition need the cursor on
@@ -407,19 +411,21 @@ func (c *Ctx) Explore(name string) {
 
 // Symbols: file outline.
 func (c *Ctx) Symbols(file string) {
+	c.Client.Open(file) // ensure open for documentSymbol in incremental mode
 	res, _ := c.Client.DocumentSymbol(file)
 	if c.JSON {
 		fmt.Fprintln(c.Out, string(res))
 		return
 	}
+	// clangd returns flat SymbolInformation[]: the range lives in location.range.
 	var syms []struct {
-		Name  string    `json:"name"`
-		Kind  int       `json:"kind"`
-		Range lsp.Range `json:"range"`
+		Name     string       `json:"name"`
+		Kind     int          `json:"kind"`
+		Location lsp.Location `json:"location"`
 	}
 	json.Unmarshal(res, &syms)
 	for _, s := range syms {
-		fmt.Fprintf(c.Out, "%s\t[%s]\tL%d\n", s.Name, kindName(s.Kind), s.Range.Start.Line+1)
+		fmt.Fprintf(c.Out, "%s\t[%s]\tL%d\n", s.Name, kindName(s.Kind), s.Location.Range.Start.Line+1)
 	}
 }
 
@@ -502,6 +508,7 @@ func (c *Ctx) symbolRange(name string) (file string, rng lsp.Range, ok bool) {
 	}
 	bestScore := -1
 	for fl := range files {
+		c.Client.Open(fl) // ensure open for documentSymbol in incremental mode
 		res, _ := c.Client.DocumentSymbol(fl)
 		// clangd returns flat SymbolInformation[]: the range lives in location.range.
 		var ds []struct {

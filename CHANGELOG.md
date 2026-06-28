@@ -3,6 +3,16 @@
 All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [0.5.0] — 2026-06-28
+### Added
+- **`--incremental` (opt-in lazy indexing)** — on a warm daemon restart with a
+  persisted clangd index, open *only* git-changed files (plus one anchor) and let
+  the static index answer the rest; the query path opens target files on demand.
+  ~2.4× faster cold start on redis (25s → 10s) with identical results; bigger wins
+  on larger repos. Off by default (full `OpenAll` stays the safe default).
+### Fixed
+- `symbols` line numbers (same flat-`SymbolInformation` parsing bug as `export`).
+
 ## [0.4.0] — 2026-06-28
 ### Added
 - **fn-pointer override table** — `ccq.fnptr.json` (JSON, zero-dependency) lets you
@@ -48,7 +58,8 @@ All notable changes to ccq are documented here. Format follows
   `compile_commands.json` auto-detect (CMake/Meson/bear), agent SKILL.md.
   Single static Go binary, zero dependencies, cross-platform.
 
-[Unreleased]: https://github.com/swchen44/ccq/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/swchen44/ccq/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/swchen44/ccq/releases/tag/v0.5.0
 [0.4.0]: https://github.com/swchen44/ccq/releases/tag/v0.4.0
 [0.3.0]: https://github.com/swchen44/ccq/releases/tag/v0.3.0
 [0.2.0]: https://github.com/swchen44/ccq/releases/tag/v0.2.0

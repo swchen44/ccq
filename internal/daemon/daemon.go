@@ -88,15 +88,26 @@ func Serve(root, clangdBin, ccDir string, openCap int, maxWait, baseline time.Du
 	}
 	defer client.Close()
 	// Warm restart: if clangd already has a static index on disk, prioritise
-	// re-indexing the files changed since we last indexed, and don't wait as long
-	// for indexing (it's mostly built). OpenAll still runs for correctness.
-	if hasStaticIndex(root) {
-		if changed := gitdiff.ChangedSince(root, readRev(dir)); len(changed) > 0 {
-			client.OpenFiles(changed)
-		}
+	// re-indexing the files changed since we last indexed and shorten the wait.
+	warm := hasStaticIndex(root)
+	var changed []string
+	if warm {
+		changed = gitdiff.ChangedSince(root, readRev(dir))
 		baseline /= 3
 	}
-	client.OpenAll(root, openCap)
+	if warm && os.Getenv("CCQ_INCREMENTAL") != "" {
+		// Incremental (opt-in): open ONLY changed files and let the persisted
+		// static index answer everything else; query-path opens target files on
+		// demand. Falls back to one anchor file so workspace/symbol activates.
+		if client.OpenFiles(changed) == 0 {
+			client.OpenAll(root, 1)
+		}
+	} else {
+		// Full (default): prioritise changed files, then open everything for
+		// correctness regardless of clangd quirks.
+		client.OpenFiles(changed)
+		client.OpenAll(root, openCap)
+	}
 	client.WaitIndex(maxWait, baseline)
 	writeRev(dir, gitdiff.Head(root))
 

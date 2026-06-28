@@ -171,8 +171,9 @@ ccq is deliberately a thin layer over clangd; it inherits clangd's strengths and
   guessed includes and no `-D`: `#ifdef` branches are over-included and macro-dependent code may be
   wrong. Use a real `compile_commands.json` for config-accurate results.
 - **Cold start & scale** — the first query spawns the daemon and indexes the repo (~30s on redis);
-  clangd's index uses RAM proportional to repo size. Warm queries are sub-second, and a warm restart
-  re-indexes changed files first. (A full "open only changed files" mode is on the v0.5 roadmap.)
+  clangd's index uses RAM proportional to repo size. Warm queries are sub-second. With a persisted
+  index, `--incremental` opens only git-changed files (~2.4× faster restart); it's opt-in while it
+  proves out, full `OpenAll` stays the default.
 - **Dependencies / scope** — needs a `clangd` binary (the engine) and, for best accuracy, a compile
   database. **C/C++ only** by design (cross-language breadth is what tree-sitter tools like cbm are for).
 
@@ -267,7 +268,8 @@ unit test for new logic (and an integration test if it touches the clangd path).
 
 | Version | Date | Highlights |
 |---------|------|-----------|
-| [**0.4.0**](https://github.com/swchen44/ccq/releases/tag/v0.4.0) | 2026-06-28 | fn-pointer override table, `replace-body`/`insert`, callees body-scan fix, git-diff warm restart |
+| [**0.5.0**](https://github.com/swchen44/ccq/releases/tag/v0.5.0) | 2026-06-28 | `--incremental` lazy indexing (open only changed files; ~2.4× faster restart, opt-in) |
+| [0.4.0](https://github.com/swchen44/ccq/releases/tag/v0.4.0) | 2026-06-28 | fn-pointer override table, `replace-body`/`insert`, callees body-scan fix, git-diff warm restart |
 | [0.3.0](https://github.com/swchen44/ccq/releases/tag/v0.3.0) (first public release) | 2026-06-27 | fn-pointer upgrade (struct-keyed, positional, field←field), no-build mode, macro search, graph export |
 | 0.2.0 (milestone) | 2026-06-26 | warm-clangd daemon (sub-second warm queries) |
 | 0.1.0 (milestone) | 2026-06-26 | navigation + rename + fnptr heuristic |
@@ -279,8 +281,8 @@ Full notes: [CHANGELOG.md](CHANGELOG.md). Latest binaries: [Releases](https://gi
 - [x] `callees` via function-body scan (clangd's `outgoingCalls` is unreliable) — *done in 0.4*
 - [x] More editing: `replace-body`, `insert-before/after` (Serena parity) — *done in 0.4*
 - [x] fn-pointer override table (`ccq.fnptr.json`) for blind spots — *done in 0.4*
-- [ ] **v0.5: full git-diff incremental** — open *only* changed files on warm restart (needs an
-      open-on-demand query path; 0.4 ships the safe version: changed-files-first + shorter index wait)
+- [x] **full git-diff incremental** (`--incremental`) — open *only* changed files on warm restart;
+      query path opens targets on demand. ~2.4× faster cold start on redis, identical results — *done in 0.5 (opt-in)*
 - [ ] More build systems (Bazel, xmake) for `ccq init`
 - [ ] fn-pointer heuristic: positional-table edge cases, comment-aware multi-line registrations
 
