@@ -269,15 +269,20 @@ func compdbPaths() []string {
 // resolveCompileDB returns clangd's --compile-commands-dir: a staged merge of the
 // --compdb files if given, else the auto-located compile_commands.json/compile_flags.txt.
 func resolveCompileDB(root string, cdbs []string) string {
+	var ccDir string
 	if len(cdbs) > 0 {
 		dir, err := compdb.Stage(cdbs)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "ERROR:", err)
 			os.Exit(1)
 		}
-		return dir
+		ccDir = dir
+	} else {
+		ccDir = compdb.Locate(root)
 	}
-	return compdb.Locate(root)
+	// a ccq.json allow/deny filter must also drop denied files from the compile DB,
+	// or clangd's background index would index them anyway.
+	return compdb.ApplyFilter(ccDir)
 }
 
 func runInline(root, clangdBin string, req cmd.Request) {

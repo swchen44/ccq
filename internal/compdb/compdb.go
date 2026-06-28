@@ -61,6 +61,52 @@ func Stage(paths []string) (string, error) {
 	return dir, nil
 }
 
+// ApplyFilter, when a ccq.json allow/deny filter is active, stages a copy of the
+// compile database in ccDir with denied files removed, and returns that dir.
+// Without this, clangd's background index (driven by the compile_commands.json TU
+// list) would index denied files anyway — the OpenAll skip alone isn't enough.
+// Returns ccDir unchanged for no-build mode or when nothing is filtered.
+func ApplyFilter(ccDir string) string {
+	if ccDir == "" || config.Source() == "" {
+		return ccDir
+	}
+	b, err := os.ReadFile(filepath.Join(ccDir, "compile_commands.json"))
+	if err != nil {
+		return ccDir // no-build (compile_flags.txt) — OpenAll already enforces the filter
+	}
+	var arr []json.RawMessage
+	if json.Unmarshal(b, &arr) != nil {
+		return ccDir
+	}
+	var kept []json.RawMessage
+	for _, e := range arr {
+		var ent struct {
+			File string `json:"file"`
+		}
+		json.Unmarshal(e, &ent)
+		if config.Keep(ent.File) {
+			kept = append(kept, e)
+		}
+	}
+	if len(kept) == len(arr) {
+		return ccDir // nothing denied
+	}
+	h := sha1.Sum([]byte(ccDir + "\x00" + config.Key()))
+	base, _ := os.UserCacheDir()
+	if base == "" {
+		base = os.TempDir()
+	}
+	dir := filepath.Join(base, "ccq", "compdb", "filtered-"+hex.EncodeToString(h[:8]))
+	if os.MkdirAll(dir, 0o755) != nil {
+		return ccDir
+	}
+	out, _ := json.Marshal(kept)
+	if os.WriteFile(filepath.Join(dir, "compile_commands.json"), out, 0o644) != nil {
+		return ccDir
+	}
+	return dir
+}
+
 // Locate returns the directory clangd should use as its compile-commands-dir:
 // one containing a compile_commands.json, or (no-build fallback) a
 // compile_flags.txt. Returns "" if neither is found.
