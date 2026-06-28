@@ -251,7 +251,7 @@ header{padding:10px 16px;border-bottom:1px solid var(--edge)}header h1{margin:0;
 <div class="legend"><span><i class="dot" style="background:#e3b341"></i>focus</span><span><i class="dot" style="background:#58a6ff"></i>caller</span>
 <span><i class="dot" style="background:#3fb950"></i>callee</span><span><i class="dot" style="background:#8b949e"></i>other</span>
 <span><i class="dot" style="background:#d29922"></i>— — fn-pointer edge</span></div></header><svg id="g"></svg><script>
-const DATA=__PAYLOAD__;const COLOR={focus:"#e3b341",caller:"#58a6ff",callee:"#3fb950",other:"#8b949e"};
+const DATA=__PAYLOAD__;DATA.nodes.forEach(n=>{n.id=n.id||n.name;});const COLOR={focus:"#e3b341",caller:"#58a6ff",callee:"#3fb950",other:"#8b949e"};
 const svg=document.getElementById("g");let W=svg.clientWidth,H=svg.clientHeight;const NS="http://www.w3.org/2000/svg";
 svg.innerHTML='<defs><marker id="arr" viewBox="0 0 10 10" refX="18" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#484f58"/></marker></defs>';
 const focus=DATA.focus;const callers=new Set(DATA.edges.filter(e=>e.dst===focus).map(e=>e.src));const callees=new Set(DATA.edges.filter(e=>e.src===focus).map(e=>e.dst));

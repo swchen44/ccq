@@ -66,7 +66,7 @@ tree-sitter extractor is an engine transplant whose endpoint is just a heavier c
 - `insert-before <sym> <file>` / `insert-after <sym> <file>` — insert content around a symbol
 
 **Export (query with your own tools)**
-- `export [--format json|sql] [--out f]` — dump symbols + call graph (incl. fnptr edges). `ccq export --format sql | sqlite3 g.db` then query with plain SQL — a zero-dependency substitute for an in-tool query language.
+- `export [--format json|sql|html] [--focus <sym> [-d N]] [--out f]` — dump the call graph (incl. fnptr edges). `--format sql | sqlite3 g.db` for plain-SQL queries (a zero-dependency Cypher substitute); **`--format html` writes a self-contained, offline interactive knowledge graph** (like CodeGraph's, driven by clangd); `--focus <sym>` builds just a neighborhood (fast on large repos, recommended for html).
 - `fnptr` — validate the fn-pointer override table (`ccq.fnptr.json`)
 
 **Serve (CodeGraph-compatible)**

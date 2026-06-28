@@ -161,18 +161,21 @@ table adds ground-truth edges.
 
 ## 5. From result to picture
 
-`ccq export --json` is the bridge from "answer" to "knowledge graph". The included generator turns it
-into a **self-contained, offline, zero-dependency** interactive HTML graph (vanilla-JS force layout —
-no D3, no CDN, on-brand with ccq's zero-dependency ethos):
+`ccq export` is the bridge from "answer" to "knowledge graph". **It's built in** — `--format html`
+emits a **self-contained, offline, zero-dependency** interactive graph (vanilla-JS force layout —
+no D3, no CDN, on-brand with ccq's zero-dependency ethos). Use `--focus` so it's a fast neighborhood,
+not the whole repo:
 
 ```bash
-ccq export --format json -p <repo> --out graph.json
-python3 docs/case-study/make_graph.py graph.json graph.html "My call graph"
+ccq export --format html --focus lookupCommand -d 1 -p <repo> --out graph.html   # -d 2 for a wider graph
 open graph.html       # drag nodes, hover to isolate a neighborhood; fn-pointer edges dashed gold
 ```
 
-This is the same idea as the CodeGraph HTML knowledge graph people share — but driven by a
-**compiler-grade** engine and a **single zero-dependency binary**.
+The HTML files in this folder were produced exactly this way. (A standalone
+[`make_graph.py`](case-study/make_graph.py) is also kept, for turning an existing
+`ccq export --format json` dump into the same graph.) This is the same idea as the CodeGraph HTML
+knowledge graph people share — but driven by a **compiler-grade** engine and a **single
+zero-dependency binary**.
 
 ---
 
@@ -190,14 +193,14 @@ This is the same idea as the CodeGraph HTML knowledge graph people share — but
 
 ## 7. Bugs this case study found (and fixed) ✅
 
-Writing this on real repos surfaced four issues — all now fixed/recorded:
+Writing this on real repos surfaced four issues — **all now fixed**:
 
 | # | Symptom (on real repos) | Root cause | Status |
 |---|--------------------------|-----------|--------|
 | 1 | `explore` showed **0 callees** for an fn-pointer dispatcher | `explore` still used clangd's unreliable `outgoingCalls` | **fixed** — shares the `callees` body-scan + fnptr logic |
 | 2 | `explore lookupCommand` showed the **header prototype** and **0 callees** | clangd go-to-definition jumps def→declaration; we showed/scanned the decl | **fixed** — `def`/`explore`/`callees` use `symbolRange` (source-file definition) |
 | 3 | `explore` was **slow** on redis (re-scanned all 472 files each query) | `fnptr.build(root)` had no cache | **fixed** — per-root cache; warm `explore` ≈ **0.85s** |
-| 4 | `ccq export` (whole repo) **times out** on a 472-file repo | export does call-hierarchy per function across the whole tree | **known limitation** — use a focused neighborhood (as here); roadmap: scope/parallelize export |
+| 4 | `ccq export` (whole repo) **times out** on a 472-file repo | export did call-hierarchy per function across the whole tree | **fixed** — `ccq export --focus <sym> [-d N]` builds just a neighborhood (BFS); whole-repo export stays for json/sql |
 
 > The case study is, itself, a test. That's the point — these are real outputs, including the warts.
 
@@ -208,11 +211,11 @@ Writing this on real repos surfaced four issues — all now fixed/recorded:
 ```bash
 # redis (full accuracy)
 ccq explore lookupCommand -p repos/redis
-ccq export --format json -p repos/redis --out g.json
-python3 docs/case-study/make_graph.py g.json redis.html "redis"
+ccq export --format html --focus lookupCommand -d 1 -p repos/redis --out redis.html
 
 # wpa_supplicant (no-build mode; fn-pointer dispatch)
 ccq init -p repos/wpa_supplicant
 ccq callers wpa_driver_wext_scan -p repos/wpa_supplicant
+ccq export --format html --focus wpa_driver_wext_scan -p repos/wpa_supplicant --out wpa.html
 ```
 Benchmark numbers and methodology: [benchmark.md](benchmark.md). Design: [design.md](design.md).
