@@ -27,6 +27,14 @@ slow to restart, and it won't resolve runtime function-pointer dispatch.
 a warm daemon for speed, a function-pointer heuristic for the one thing clangd misses,
 symbol-level editing, and a zero-dependency single binary that drops onto a locked-down intranet.
 
+**Relationship to CodeGraph.** ccq is *inspired by* CodeGraph and **ports its `c-fnptr-synthesizer.ts`**
+heuristic — but runs it on clangd's compiler-grade engine instead of tree-sitter, and stays a
+zero-dependency Go binary (no Node bundle). For a drop-in feel, `ccq mcp` serves a
+**CodeGraph-compatible** MCP interface with `explore` as the headline tool. We deliberately did
+**not** fork CodeGraph (it's MIT, so we could) — adding a clangd backend to its 5,689-line
+tree-sitter extractor is an engine transplant whose endpoint is just a heavier ccq; see
+[docs/benchmark.md §6](docs/benchmark.md).
+
 ## Why ccq (the pain points it solves)
 
 | Tool it targets | Their pain point | How ccq solves it |
@@ -60,6 +68,9 @@ symbol-level editing, and a zero-dependency single binary that drops onto a lock
 **Export (query with your own tools)**
 - `export [--format json|sql] [--out f]` — dump symbols + call graph (incl. fnptr edges). `ccq export --format sql | sqlite3 g.db` then query with plain SQL — a zero-dependency substitute for an in-tool query language.
 - `fnptr` — validate the fn-pointer override table (`ccq.fnptr.json`)
+
+**Serve (CodeGraph-compatible)**
+- `mcp` — serve ccq over the **Model Context Protocol** (JSON-RPC/stdio), zero extra deps. Exposes `explore` (headline), `callers`, `callees`, `def`, `refs`, `search`, `impact`, `symbols`, `macro` — so MCP clients, and anyone used to CodeGraph, can drive ccq with no relearning.
 
 **Project**
 - `init` — locate/generate `compile_commands.json` (CMake / Meson / bear), **or a no-build `compile_flags.txt`** if there's no build system; warm clangd
@@ -145,7 +156,7 @@ methodology: [docs/benchmark.md](docs/benchmark.md)).
 | **Initial index / build** ⚠️ | ~4s | ~11–14s | needs full build + index | needs full build + index | **needs full build + ~30s index (ccq's weakest)** |
 | Warm repeated query | per-run | per-run | — | per-run | **~0.07–0.6s** |
 | Editing | — | — | rename | ✅ LSP | ✅ rename / replace-body / insert |
-| Integration | MCP | MCP | LSP (editor) | MCP | **CLI + agent skill** |
+| Integration | MCP | MCP | LSP (editor) | MCP | **CLI + agent skill + MCP** (`ccq mcp`) |
 | Install footprint (intranet) | 257 MB, vendored build | 188 MB Node bundle | ~100–350 MB binary | 🔴 ~890 pkgs + downloads clangd | **single Go binary, 0 Go deps** (needs clangd) |
 
 **Strengths** ✅ — only tool passing all 8 hard-C features; keeps clangd's wins (`#ifdef`, macros,

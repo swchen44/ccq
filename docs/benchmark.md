@@ -156,9 +156,37 @@ and the only thing missing (an MCP wrapper) is easy to add if needed.
 - **Slowest first index**: needs `compile_commands.json` (a real build, minutes) + clangd background index (~30s) — far heavier than tree-sitter/traditional tools.
 - **Depends on an external `clangd` binary** (and, for best accuracy, a compile DB).
 - fn-pointer heuristic is an **over-approximation** and misses callbacks/indirect dispatch unless declared in the override table; `callees` body-scan can miss macro-hidden calls.
-- **C/C++ only**; **no MCP** out of the box (CLI + skill instead).
+- **C/C++ only** (by design); primary interface is CLI + agent skill (an MCP server is also
+  provided via `ccq mcp`, but ccq is not a long-running graph service like cbm/CodeGraph).
 
-## 6. Reproduce
+## 6. "Could you just fork CodeGraph and bolt clangd on?"
+
+CodeGraph is the most-trusted name in this space, so it's tempting to fork it and add a
+clangd backend rather than build ccq. We investigated it directly; here's what we found and
+why we didn't.
+
+| Check | Finding |
+|-------|---------|
+| **License** | MIT — forking/redistribution is fine (keep the notice). ✅ |
+| **Architecture** | Extraction is one **5,689-line** `TreeSitterExtractor` (`src/extraction/tree-sitter.ts`); resolution/graph layers depend on tree-sitter node identity (`generateNodeId`; framework handlers reason in tree-sitter terms). **No backend abstraction.** ⚠️ |
+| **compile_commands.json** | CodeGraph already reads it — but only in `import-resolver.ts` to harvest **include directories** for import heuristics, *not* to drive a compiler. A foothold, not a clangd engine. |
+| **Runtime** | Node `>=20 <25` + `web-tree-sitter` + bundled `.wasm` grammars → the 188 MB Node bundle and intranet weight ccq avoids. |
+
+**Conclusion:** "add clangd" to CodeGraph isn't a feature — it's an **engine transplant**: you'd
+rewrite the extraction pipeline to reproduce tree-sitter's node-id scheme from clangd's LSP data,
+keep the whole downstream working, carry permanent upstream-merge debt, *and* re-import the
+Node/bundle cost. The endpoint of that work is, functionally, **ccq** (clangd engine + ported
+fn-pointer synthesis + `explore`). So instead of forking, ccq:
+
+- **ports** CodeGraph's `c-fnptr-synthesizer.ts` heuristic (provenance kept), and
+- ships a **CodeGraph-compatible MCP server** (`ccq mcp`, headline tool `explore`) so anyone
+  comfortable with CodeGraph can adopt ccq with no new dependencies and no relearning.
+
+You get CodeGraph's fn-pointer win *on a compiler-grade engine*, without the tree-sitter accuracy
+ceiling or the Node footprint. (CodeGraph passes 3/8 hard-C features and indexes redis in ~11s at
+tree-sitter accuracy; ccq passes 8/8 on the same fixtures — see §4.1–4.2.)
+
+## 7. Reproduce
 
 ```bash
 git clone https://github.com/swchen44/cbm-vs-codegraph-bench
