@@ -147,6 +147,7 @@ func main() {
 	if format == "" {
 		format = "json"
 	}
+	warnCompileDB(root) // surface degraded/no-build mode in BOTH daemon and inline paths
 	req := cmd.Request{Cmd: sub, Args: normalize(sub, args), JSON: jsonOut, Depth: depth,
 		Apply: hasFlag("--apply"), Format: format, OutPath: outPath, Focus: flagVal("--focus")}
 
@@ -164,13 +165,18 @@ func main() {
 	runInline(root, clangdBin, req)
 }
 
-func runInline(root, clangdBin string, req cmd.Request) {
-	ccDir := compdb.Locate(root)
-	if ccDir == "" {
+// warnCompileDB tells the user when ccq is running without a real build database —
+// shown for every query (daemon or inline), since the warm daemon path used to hide it.
+func warnCompileDB(root string) {
+	if compdb.Locate(root) == "" {
 		fmt.Fprintln(os.Stderr, "warning: no compile_commands.json/compile_flags.txt — degraded (same-file) mode. Run `ccq init`.")
 	} else if compdb.IsNoBuild(root) {
 		fmt.Fprintln(os.Stderr, "note: no-build mode (compile_flags.txt) — cross-file works but accuracy is lower than a real build (#ifdef over-included, no -D).")
 	}
+}
+
+func runInline(root, clangdBin string, req cmd.Request) {
+	ccDir := compdb.Locate(root)
 	client, err := lsp.Start(clangdBin, root, ccDir)
 	if err != nil {
 		fmt.Println("ERROR:", err)

@@ -5,6 +5,10 @@ All notable changes to ccq are documented here. Format follows
 
 ## [Unreleased]
 ### Fixed
+- **No-build / degraded-mode warning was hidden in the default daemon path** — it only printed
+  with `--no-daemon`, so an intranet user in `compile_flags.txt` (no-build) mode never saw that
+  accuracy was reduced. The warning now prints for every query (daemon and inline). (Found while
+  writing the intranet-no-build case study.)
 - **Warm daemon served stale results after `--apply` edits** — `rename`/`replace-body`/`insert`
   wrote files on disk but didn't tell clangd, so the next query on the same daemon missed the new
   symbol (e.g. `callers <newName>` returned `(none)`, `replace-body <newName>` said "not found").
