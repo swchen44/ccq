@@ -130,6 +130,41 @@ sequenceDiagram
 | `compile_flags.txt` (no-build) | flat flags, no background index; ccq primes via OpenAll | cross-file works; `#ifdef` over-included, no `-D` |
 | none | `clang foo.c` guess | same-file only |
 
+### `--compdb` — multiple / renamed compile databases (multi-target builds)
+
+clangd takes **exactly one** database named `compile_commands.json` in a directory (it doesn't
+merge several or accept arbitrary names). Builds that emit several executables produce several
+databases, often renamed and scattered. `--compdb` bridges that:
+
+```
+ccq callers foo --compdb build1.json,build2.json    # any names; comma-separated
+```
+
+```mermaid
+flowchart LR
+    A["--compdb a.json,b.json"] --> M["compdb.Stage:<br/>merge arrays → one<br/>compile_commands.json<br/>in a stable cache dir"]
+    M --> CC["clangd --compile-commands-dir=&lt;staged&gt;"]
+    P["-p &lt;source root&gt;"] --> OA["OpenAll / fnptr<br/>(source stays the root)"]
+    A --> K["daemon key = hash(root + compdb set)"]
+    K --> D["one warm clangd per compile-DB set"]
+```
+
+- **Decoupling**: the compile DB (`--compdb`) and the source root (`-p`) are separate — source
+  scanning (OpenAll, fnptr) stays on `-p`, while clangd's flags come from the staged DB.
+- **Merge semantics**: arrays are concatenated. A file built several ways keeps all its entries;
+  clangd picks one per file, so `#ifdef`/`-D` reflects **one** of the configs. For an exact
+  per-config view, pass a single `--compdb` for that build.
+- **Daemon scoping**: the daemon socket/state is keyed by `(root, compdb set)` (see
+  `daemon.SetKey`). Distinct `--compdb` sets therefore get **distinct warm clangds** — switching
+  configs hits a different warm instance with **no re-index** (vs symlinking one
+  `compile_commands.json`, which makes clangd re-index on every swap).
+
+**Tradeoff — running a clangd per config is not free:** each instance holds its **own** in-memory
+index (RAM ×N, no sharing), pays its **own** cold-index cost, and may contend on the on-disk
+`.cache/clangd`; edits must be re-synced to each. So ccq keeps the default "one warm clangd per
+root" and only opens extra instances **on demand** per distinct `--compdb`. Use a few configs, not
+dozens.
+
 ## 7. Key implementation notes (gotchas)
 
 - `CallHierarchyItem.Data` (clangd's opaque payload) **must be round-tripped** or

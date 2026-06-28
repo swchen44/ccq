@@ -4,6 +4,12 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Added
+- **`--compdb a.json,b.json`** — use compile databases of **any name**, and **merge** several
+  (multi-target builds emit several `compile_commands.json`, often renamed). The compile DB is
+  decoupled from the source root (`-p`), and the warm daemon is keyed by `(root, compdb set)` so
+  distinct configs get **distinct warm clangds** — switch build configs with no re-index. See
+  [docs/design.md §6](docs/design.md) (incl. the cost of running a clangd per config).
 ### Fixed
 - **No-build / degraded-mode warning was hidden in the default daemon path** — it only printed
   with `--no-daemon`, so an intranet user in `compile_flags.txt` (no-build) mode never saw that

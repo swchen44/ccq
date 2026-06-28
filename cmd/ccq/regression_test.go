@@ -162,6 +162,27 @@ func TestRegrDaemonSyncAfterApply(t *testing.T) {
 	}
 }
 
+// --compdb must accept a renamed compile database and drive clangd through it
+// (no compile_commands.json in the source root).
+func TestCompdbNamedFile(t *testing.T) {
+	bin := ccqbin(t)
+	proj := copyCproj(t)
+	os.Remove(filepath.Join(proj, "compile_commands.json")) // only a renamed DB exists
+	db := filepath.Join(proj, "build1.json")
+	b, _ := json.MarshalIndent([]ccEntry{
+		{proj, "clang -std=c11 -c lib.c", filepath.Join(proj, "lib.c")},
+		{proj, "clang -std=c11 -c main.c", filepath.Join(proj, "main.c")},
+	}, "", " ")
+	os.WriteFile(db, b, 0o644)
+	out := run(t, bin, "callers", "add", "--compdb", db, "-p", proj, "--no-daemon")
+	if !strings.Contains(out, "caller_one") {
+		t.Errorf("--compdb (renamed DB) should resolve callers of add\n%s", out)
+	}
+	if strings.Contains(out, "no-build mode") {
+		t.Errorf("--compdb provides a real DB; no-build warning should not appear\n%s", out)
+	}
+}
+
 // Bug #8 — the no-build warning must print in the default daemon path, not only
 // with --no-daemon.
 func TestRegrNoBuildWarningInDaemon(t *testing.T) {

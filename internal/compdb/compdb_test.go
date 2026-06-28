@@ -1,11 +1,45 @@
 package compdb
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+// TestStageMerge: --compdb a,b merges the arrays into one compile_commands.json.
+func TestStageMerge(t *testing.T) {
+	root := t.TempDir()
+	a := filepath.Join(root, "b1.json")
+	b := filepath.Join(root, "b2.json")
+	write(t, a, `[{"directory":"/x","command":"clang -c f.c","file":"/x/f.c"}]`)
+	write(t, b, `[{"directory":"/y","command":"clang -c g.c","file":"/y/g.c"}]`)
+
+	dir, err := Stage([]string{a, b})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := os.ReadFile(filepath.Join(dir, "compile_commands.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var entries []map[string]any
+	if err := json.Unmarshal(out, &entries); err != nil {
+		t.Fatalf("staged file is not a JSON array: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Errorf("merged should have 2 entries, got %d", len(entries))
+	}
+	// stable dir for the same input set
+	dir2, _ := Stage([]string{a, b})
+	if dir2 != dir {
+		t.Error("Stage dir should be stable for the same input set")
+	}
+	if d, _ := Stage(nil); d != "" {
+		t.Errorf("Stage(nil) should be empty, got %q", d)
+	}
+}
 
 func write(t *testing.T, p, body string) {
 	t.Helper()

@@ -3,12 +3,61 @@
 package compdb
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
+
+// Stage merges one or more compile_commands.json files (any filenames, anywhere)
+// into a single compile_commands.json inside a stable per-input cache dir, and
+// returns that dir for clangd's --compile-commands-dir. Use it for projects whose
+// build emits several differently-named databases (e.g. one per executable):
+//
+//	ccq callers foo --compdb build1.json,build2.json,build3.json
+//
+// Entries are concatenated — a file built several ways keeps all its entries and
+// clangd picks one per file (so #ifdef/-D reflects one of the configs; query a
+// single --compdb for an exact per-config view). The cache dir is stable per input
+// set so clangd's on-disk index persists across runs.
+func Stage(paths []string) (string, error) {
+	if len(paths) == 0 {
+		return "", nil
+	}
+	var merged []json.RawMessage
+	for _, p := range paths {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return "", fmt.Errorf("--compdb %s: %w", p, err)
+		}
+		var arr []json.RawMessage
+		if err := json.Unmarshal(b, &arr); err != nil {
+			return "", fmt.Errorf("--compdb %s: not a compile_commands.json array: %w", p, err)
+		}
+		merged = append(merged, arr...)
+	}
+	h := sha1.Sum([]byte(strings.Join(paths, "\x00")))
+	base, _ := os.UserCacheDir()
+	if base == "" {
+		base = os.TempDir()
+	}
+	dir := filepath.Join(base, "ccq", "compdb", hex.EncodeToString(h[:8]))
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	out, err := json.Marshal(merged)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(filepath.Join(dir, "compile_commands.json"), out, 0o644); err != nil {
+		return "", err
+	}
+	return dir, nil
+}
 
 // Locate returns the directory clangd should use as its compile-commands-dir:
 // one containing a compile_commands.json, or (no-build fallback) a

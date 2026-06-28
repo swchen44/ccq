@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/swchen44/ccq/internal/cmd"
 	"github.com/swchen44/ccq/internal/compdb"
@@ -64,6 +65,8 @@ FLAGS:
   -d <n>        depth for impact
   --no-daemon   run clangd inline (no warm daemon)
   --incremental warm restart opens only git-changed files (needs a persisted clangd index)
+  --compdb a.json[,b.json…]  use these compile_commands.json file(s) (any name; merged);
+                each distinct set gets its own warm clangd (one per build config)
 `
 
 const version = "ccq 0.5.0"
@@ -90,6 +93,12 @@ func main() {
 	if hasFlag("--incremental") {
 		os.Setenv("CCQ_INCREMENTAL", "1")
 	}
+	// --compdb: explicit compile_commands.json file(s) (any name; comma-separated,
+	// auto-merged). Scope the daemon to this compile-DB set so distinct configs get
+	// distinct warm clangds instead of colliding on the root key.
+	cdbs := compdbPaths()
+	compdbArg := strings.Join(cdbs, ",")
+	daemon.SetKey(compdbArg)
 	exe, _ := os.Executable()
 
 	switch sub {
@@ -126,12 +135,12 @@ func main() {
 			croot = absOr(croot)
 			cd := resolveClangd(clangdBin)
 			req := cmd.Request{Cmd: sub, Args: []string{arg}, Depth: 3}
-			return daemon.Query(croot, exe, cd, req)
+			return daemon.Query(croot, exe, cd, compdbArg, req)
 		}
 		mcp.Serve(os.Stdin, os.Stdout, runner, root)
 		return
 	case "__daemon": // internal: the warm server process
-		ccDir := compdb.Locate(root)
+		ccDir := resolveCompileDB(root, cdbs)
 		maxWait, baseline := cmd.IndexWaits(isBig(root))
 		if err := daemon.Serve(root, clangdBin, ccDir, 1200, maxWait, baseline); err != nil {
 			os.Exit(1)
@@ -153,7 +162,7 @@ func main() {
 
 	// Daemon path (default): fast warm clangd.
 	if !noDaemon {
-		out, err := daemon.Query(root, exe, clangdBin, req)
+		out, err := daemon.Query(root, exe, clangdBin, compdbArg, req)
 		if err == nil {
 			fmt.Print(out)
 			return
@@ -168,6 +177,9 @@ func main() {
 // warnCompileDB tells the user when ccq is running without a real build database —
 // shown for every query (daemon or inline), since the warm daemon path used to hide it.
 func warnCompileDB(root string) {
+	if len(compdbPaths()) > 0 {
+		return // explicit --compdb provides a real compile database
+	}
 	if compdb.Locate(root) == "" {
 		fmt.Fprintln(os.Stderr, "warning: no compile_commands.json/compile_flags.txt — degraded (same-file) mode. Run `ccq init`.")
 	} else if compdb.IsNoBuild(root) {
@@ -175,8 +187,37 @@ func warnCompileDB(root string) {
 	}
 }
 
+// compdbPaths returns the absolute paths given via --compdb (comma-separated), or nil.
+func compdbPaths() []string {
+	v := flagVal("--compdb")
+	if v == "" {
+		return nil
+	}
+	var out []string
+	for _, p := range strings.Split(v, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, absOr(p))
+		}
+	}
+	return out
+}
+
+// resolveCompileDB returns clangd's --compile-commands-dir: a staged merge of the
+// --compdb files if given, else the auto-located compile_commands.json/compile_flags.txt.
+func resolveCompileDB(root string, cdbs []string) string {
+	if len(cdbs) > 0 {
+		dir, err := compdb.Stage(cdbs)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "ERROR:", err)
+			os.Exit(1)
+		}
+		return dir
+	}
+	return compdb.Locate(root)
+}
+
 func runInline(root, clangdBin string, req cmd.Request) {
-	ccDir := compdb.Locate(root)
+	ccDir := resolveCompileDB(root, compdbPaths())
 	client, err := lsp.Start(clangdBin, root, ccDir)
 	if err != nil {
 		fmt.Println("ERROR:", err)
@@ -225,7 +266,7 @@ func parseFlags(in []string) (args []string, root string, jsonOut bool, clangdBi
 		case "--no-daemon":
 			noDaemon = true
 		case "--apply", "--incremental":
-		case "--format", "--out", "--focus":
+		case "--format", "--out", "--focus", "--compdb":
 			i++ // value consumed via flagVal
 		default:
 			args = append(args, in[i])

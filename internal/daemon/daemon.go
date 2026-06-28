@@ -39,8 +39,17 @@ type respMsg struct {
 	Err    string `json:"err,omitempty"`
 }
 
+// keySalt scopes the daemon's socket/state to a compile-DB context. With it,
+// distinct --compdb sets get distinct warm daemons (a clangd per build config)
+// instead of colliding on the bare root key. Set identically on client and the
+// spawned daemon (both derive it from the same --compdb flag).
+var keySalt string
+
+// SetKey sets the compile-DB scope for daemon addressing (call before Query/Serve).
+func SetKey(salt string) { keySalt = salt }
+
 func stateDir(root string) string {
-	h := sha1.Sum([]byte(root))
+	h := sha1.Sum([]byte(root + "\x00" + keySalt))
 	base, _ := os.UserCacheDir()
 	if base == "" {
 		base = os.TempDir()
@@ -173,8 +182,8 @@ func Serve(root, clangdBin, ccDir string, openCap int, maxWait, baseline time.Du
 
 // Query connects to the project's daemon (spawning it if needed) and runs req,
 // returning the command's text output.
-func Query(root, exe, clangdBin string, req cmd.Request) (string, error) {
-	conn, err := connectOrSpawn(root, exe, clangdBin)
+func Query(root, exe, clangdBin, compdbArg string, req cmd.Request) (string, error) {
+	conn, err := connectOrSpawn(root, exe, clangdBin, compdbArg)
 	if err != nil {
 		return "", err
 	}
@@ -221,7 +230,7 @@ func Shutdown(root string) error {
 	return nil
 }
 
-func connectOrSpawn(root, exe, clangdBin string) (net.Conn, error) {
+func connectOrSpawn(root, exe, clangdBin, compdbArg string) (net.Conn, error) {
 	if conn, err := dial(root); err == nil {
 		return conn, nil
 	}
@@ -229,6 +238,9 @@ func connectOrSpawn(root, exe, clangdBin string) (net.Conn, error) {
 	args := []string{"__daemon", "-p", root}
 	if clangdBin != "" {
 		args = append(args, "--clangd", clangdBin)
+	}
+	if compdbArg != "" {
+		args = append(args, "--compdb", compdbArg)
 	}
 	c := exec.Command(exe, args...)
 	detach(c)
