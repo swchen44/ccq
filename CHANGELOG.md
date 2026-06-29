@@ -4,7 +4,11 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.6.0] — 2026-06-29
 ### Added
+- **`ccq mcp`** — serve ccq over the Model Context Protocol (JSON-RPC/stdio), zero extra deps;
+  CodeGraph-compatible tools (`explore` headline + callers/callees/def/refs/search/impact/symbols/macro).
 - **`ccq.json` settings + `--config`** — a project/user config (`./ccq.json` >
   `~/.config/ccq/ccq.json` > `--config <path>`) with `allow`/`deny` **regex index filters**
   applied globally (OpenAll, fn-pointer scan, export). `ccq config` shows the effective settings.
@@ -52,6 +56,12 @@ All notable changes to ccq are documented here. Format follows
   header **prototype**: clangd's go-to-definition can jump from the definition to the
   declaration, which made `explore lookupCommand` show the prototype and report 0 callees.
   They now use `symbolRange` (source-file definition preferred).
+- **`ccq.json` deny now also filters the compile database** — the filter gated `OpenAll`, but
+  clangd background-indexes every TU in `compile_commands.json`, so denied files were still indexed.
+  Caught by CI's newer clangd (18) — `compdb.ApplyFilter` stages a DB with denied entries removed.
+- `def`/`explore`/`callees`/`export`/`symbols`: clangd returns flat `SymbolInformation`
+  (`location.range`), which was read as a top-level `range` (always 0) — line numbers and
+  `replace-body` targeting are now correct.
 
 ## [0.5.0] — 2026-06-28
 ### Added
@@ -108,7 +118,8 @@ All notable changes to ccq are documented here. Format follows
   `compile_commands.json` auto-detect (CMake/Meson/bear), agent SKILL.md.
   Single static Go binary, zero dependencies, cross-platform.
 
-[Unreleased]: https://github.com/swchen44/ccq/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/swchen44/ccq/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/swchen44/ccq/releases/tag/v0.6.0
 [0.5.0]: https://github.com/swchen44/ccq/releases/tag/v0.5.0
 [0.4.0]: https://github.com/swchen44/ccq/releases/tag/v0.4.0
 [0.3.0]: https://github.com/swchen44/ccq/releases/tag/v0.3.0

@@ -232,7 +232,8 @@ make fmt               # gofmt -w .
 
 | 版本 | 日期 | 重點 |
 |------|------|------|
-| [**0.5.0**](https://github.com/swchen44/ccq/releases/tag/v0.5.0) | 2026-06-28 | --incremental 懶開索引(只開變動檔;暖重啟 ~2.4× 快,opt-in) |
+| [**0.6.0**](https://github.com/swchen44/ccq/releases/tag/v0.6.0) | 2026-06-29 | `ccq mcp`;`--compdb`(多 target);`ccq.json` allow/deny 索引過濾;`wait-index`;`cache`;`doctor` |
+| [0.5.0](https://github.com/swchen44/ccq/releases/tag/v0.5.0) | 2026-06-28 | --incremental 懶開索引(只開變動檔;暖重啟 ~2.4× 快,opt-in) |
 | [0.4.0](https://github.com/swchen44/ccq/releases/tag/v0.4.0) | 2026-06-28 | fn-pointer 對照表、replace-body/insert、callees body-scan 修正、git-diff 暖重啟 |
 | [0.3.0](https://github.com/swchen44/ccq/releases/tag/v0.3.0)（首個公開版） | 2026-06-27 | fnptr 升級（複合鍵、positional、field←field）、no-build 模式、巨集搜尋、graph export |
 | 0.2.0（里程碑） | 2026-06-26 | warm-clangd daemon（亞秒暖查詢） |
