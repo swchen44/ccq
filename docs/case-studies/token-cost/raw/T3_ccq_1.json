@@ -1,0 +1,63 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 11478,
+  "duration_api_ms": 9784,
+  "ttft_ms": 2538,
+  "ttft_stream_ms": 1648,
+  "time_to_request_ms": 48,
+  "num_turns": 2,
+  "result": "AFFECTED:\n```\nRM_ACLCheckCommandPermissions\nRM_Call\nRM_GetCommandKeysWithFlags\n_serverAssertPrintClientInfo\naclCommand\nasmFeedMigrationClient\ngetKeysSubcommandImpl\nloadSingleAppendOnlyFile\nlogCurrentClient\nluaRedisAclCheckCmdPermissionsCommand\npreprocessCommand\nprocessCommand\nscriptCall\nmoduleRegisterCoreAPI\nRM_GetCommandKeys\n_serverAssertWithInfo\nACL_Subcommands\npropagateNow\ncommandGetKeysAndFlagsCommand\ngetKeysSubcommand\nloadAppendOnlyFiles\nprintCrashReport\nluaRegisterRedisAPI\ngetClientCachedKeyResult\nprocessInputBuffer\nprocessCommandAndResetClient\nluaRedisGenericCommand\n```\n\n\u517127\u500b\u51fd\u5f0f\uff1a\u5176\u4e2d13\u500b\u662f\u76f4\u63a5\u547c\u53eb\u8005\uff08hop 1\uff09\uff0c14\u500b\u662f\u9593\u63a5\u547c\u53eb\u8005\uff08hop 2\uff09\u3002",
+  "stop_reason": "end_turn",
+  "session_id": "e6209cb2-9c7c-4250-9e47-fdf9f6b633fa",
+  "total_cost_usd": 0.0793533,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 9915,
+    "cache_read_input_tokens": 43671,
+    "output_tokens": 450,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 9915,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 1,
+        "output_tokens": 240,
+        "cache_read_input_tokens": 26498,
+        "cache_creation_input_tokens": 590,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 590
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-4-6": {
+      "inputTokens": 4,
+      "outputTokens": 450,
+      "cacheReadInputTokens": 43671,
+      "cacheCreationInputTokens": 9915,
+      "webSearchRequests": 0,
+      "costUSD": 0.0793533,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "15edb467-da96-41e4-959e-2ff7250633db",
+  "_wall_s": 13.3
+}

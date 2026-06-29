@@ -13,6 +13,7 @@ exercise found (writing a case study is itself a test).
 | [intranet-no-build](intranet-no-build/README.md) | wpa_supplicant | the **air-gapped / no-build** dimension: zero-dependency install, `ccq init` → `compile_flags.txt`, fn-pointer dispatch without a build, the accuracy tradeoff; found & fixed a hidden no-build-warning bug |
 | [multi-target-compdb](multi-target-compdb/README.md) | synthetic 8-folder / 3-exe | the **multi-target build** dimension: `--compdb` merges several renamed `compile_commands.json`, one warm clangd per config, and the **first-`--compdb`-wins** rule for files shared across targets |
 | [index-control](index-control/README.md) | redis | the **operations** dimension on a big repo: `ccq.json` allow/deny index filter, `ccq wait-index` (know the index is ready before querying), `ccq cache` (inspect/clean), `ccq doctor` (diagnose) |
+| [token-cost](token-cost/README.md) | redis, wpa_supplicant | the **ROI** dimension: a real Claude Code A/B (same model+prompt, ccq on/off) measuring actual tokens/cost/completion — **2–12× cheaper**, ~6× faster, and one no-build task the agent **can't solve without ccq** (0% vs 100%) |
 
 ## Test rigor
 

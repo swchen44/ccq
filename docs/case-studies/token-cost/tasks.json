@@ -1,0 +1,42 @@
+[
+  {
+    "id": "T1",
+    "repo": "redis",
+    "mode": "build",
+    "title": "List all callers of lookupCommand",
+    "prompt": "In this C codebase, find EVERY function that calls `lookupCommand`. Give me the final answer as a plain list of caller function names, one per line, under a line that says 'CALLERS:'. Be exhaustive but precise (real call sites only, not declarations/comments/strings).",
+    "gt": ["RM_ACLCheckCommandPermissions", "RM_Call", "RM_GetCommandKeysWithFlags", "_serverAssertPrintClientInfo", "aclCommand", "asmFeedMigrationClient", "getKeysSubcommandImpl", "loadSingleAppendOnlyFile", "logCurrentClient", "luaRedisAclCheckCmdPermissionsCommand", "preprocessCommand", "processCommand", "scriptCall"]
+  },
+  {
+    "id": "T2",
+    "repo": "wpa",
+    "mode": "no-build",
+    "title": "Who triggers wpa_driver_wext_scan to run (no-build)",
+    "prompt": "In this C codebase, I need to change the function `wpa_driver_wext_scan`. Which functions in the codebase would actually cause it to be executed at runtime (its effective callers)? List the function names, one per line, under a line that says 'CALLERS:'.",
+    "gt": ["hostapd_driver_scan", "wpa_drv_scan", "wpa_priv_cmd_scan"]
+  },
+  {
+    "id": "T3",
+    "repo": "redis",
+    "mode": "build",
+    "title": "Transitive blast radius of lookupCommand (depth 2)",
+    "prompt": "In this C codebase, compute the transitive set of functions that would be affected if I change `lookupCommand` — i.e. its callers, and their callers, up to 2 levels deep. Give the final answer as a plain list of function names, one per line, under a line that says 'AFFECTED:'.",
+    "gt": ["processCommand", "preprocessCommand", "scriptCall", "aclCommand", "RM_Call"]
+  },
+  {
+    "id": "T4",
+    "repo": "redis",
+    "mode": "build",
+    "title": "Explain processCommand (callers + callees)",
+    "prompt": "In this C codebase, explain the function `processCommand`: what it does, which functions call it, and which functions it calls. Give the final answer with three labelled sections 'SUMMARY:', 'CALLERS:', 'CALLEES:' (names one per line under the latter two).",
+    "gt": ["lookupCommand", "call", "processCommand"]
+  },
+  {
+    "id": "T5",
+    "repo": "wpa",
+    "mode": "no-build",
+    "title": "Explain hostapd_driver_scan relationships (no-build)",
+    "prompt": "In this C codebase (no build system / no compile_commands.json), explain the function `hostapd_driver_scan`: which functions call it and which functions it calls (including any function-pointer dispatch). Give the final answer with sections 'CALLERS:' and 'CALLEES:' (names one per line).",
+    "gt": ["wpa_driver_wext_scan"]
+  }
+]

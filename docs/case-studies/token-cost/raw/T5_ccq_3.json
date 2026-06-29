@@ -1,0 +1,63 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 12986,
+  "duration_api_ms": 12137,
+  "ttft_ms": 5219,
+  "ttft_stream_ms": 4082,
+  "time_to_request_ms": 73,
+  "num_turns": 3,
+  "result": "`ccq` \u56de\u50b3\u7684\u7d50\u679c\u662f driver function-pointer dispatch\uff08\u900f\u904e `hapd->driver->scan2` \u4e4b\u985e\u7684\u4ecb\u9762\uff09\uff0ccallees \u5df2\u5217\u51fa\u4e09\u500b driver \u5be6\u4f5c\u3002\u4ee5\u4e0b\u662f\u5b8c\u6574\u7b54\u6848\uff1a\n\n---\n\n**`hostapd_driver_scan` \u8aaa\u660e**\n\n\u6b64\u51fd\u5f0f\u662f hostapd \u7684 scan \u62bd\u8c61\u5c64\uff0c\u900f\u904e `driver->scan2` function pointer \u5206\u6d3e\u81f3\u5e95\u5c64 driver \u5be6\u4f5c\u3002\n\n---\n\n**CALLERS:**\n```\nacs_request_scan\n```\n\n**CALLEES:**\n```\ndriver_nl80211_scan2\nwpa_driver_privsep_scan\nwpa_driver_wext_scan\n```\n\n\uff08\u4e09\u500b callees \u5747\u70ba function-pointer dispatch \u7684\u5be6\u4f5c\u7aef\uff0c\u5c0d\u61c9 nl80211\u3001privsep\u3001wext \u4e09\u7a2e driver \u5f8c\u7aef\u3002\uff09",
+  "stop_reason": "end_turn",
+  "session_id": "115165a2-025e-449c-92c5-cd54d5947eea",
+  "total_cost_usd": 0.0255774,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 412,
+    "cache_read_input_tokens": 53028,
+    "output_tokens": 479,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 412,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 1,
+        "output_tokens": 267,
+        "cache_read_input_tokens": 26514,
+        "cache_creation_input_tokens": 412,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 412
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-4-6": {
+      "inputTokens": 4,
+      "outputTokens": 479,
+      "cacheReadInputTokens": 53028,
+      "cacheCreationInputTokens": 412,
+      "webSearchRequests": 0,
+      "costUSD": 0.0255774,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "90d9404e-488b-4ab2-b110-53a675cba989",
+  "_wall_s": 14.8
+}

@@ -1,0 +1,63 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 12741,
+  "duration_api_ms": 11961,
+  "ttft_ms": 3173,
+  "ttft_stream_ms": 2711,
+  "time_to_request_ms": 56,
+  "num_turns": 2,
+  "result": "AFFECTED:\nRM_ACLCheckCommandPermissions\nRM_Call\nRM_GetCommandKeysWithFlags\n_serverAssertPrintClientInfo\naclCommand\nasmFeedMigrationClient\ngetKeysSubcommandImpl\nloadSingleAppendOnlyFile\nlogCurrentClient\nluaRedisAclCheckCmdPermissionsCommand\npreprocessCommand\nprocessCommand\nscriptCall\nmoduleRegisterCoreAPI\nRM_GetCommandKeys\n_serverAssertWithInfo\nACL_Subcommands\npropagateNow\ncommandGetKeysAndFlagsCommand\ngetKeysSubcommand\nloadAppendOnlyFiles\nprintCrashReport\nluaRegisterRedisAPI\ngetClientCachedKeyResult\nprocessInputBuffer\nprocessCommandAndResetClient\nluaRedisGenericCommand",
+  "stop_reason": "end_turn",
+  "session_id": "a506c11a-38b6-496a-bc1b-0c952b430b24",
+  "total_cost_usd": 0.07846439999999999,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 9916,
+    "cache_read_input_tokens": 43688,
+    "output_tokens": 390,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 9916,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 1,
+        "output_tokens": 196,
+        "cache_read_input_tokens": 26515,
+        "cache_creation_input_tokens": 574,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 574
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-4-6": {
+      "inputTokens": 4,
+      "outputTokens": 390,
+      "cacheReadInputTokens": 43688,
+      "cacheCreationInputTokens": 9916,
+      "webSearchRequests": 0,
+      "costUSD": 0.07846439999999999,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "0326e979-0a8b-4ef1-b318-6ca3b15a4d84",
+  "_wall_s": 14.3
+}

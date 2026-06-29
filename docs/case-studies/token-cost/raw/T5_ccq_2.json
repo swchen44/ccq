@@ -1,0 +1,63 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 9625,
+  "duration_api_ms": 8819,
+  "ttft_ms": 2887,
+  "ttft_stream_ms": 1776,
+  "time_to_request_ms": 23,
+  "num_turns": 2,
+  "result": "\u7d50\u679c\u5df2\u5f88\u6e05\u695a\u3002`driver_nl80211_scan2`\u3001`wpa_driver_privsep_scan`\u3001`wpa_driver_wext_scan` \u9019\u4e09\u500b\u662f\u900f\u904e driver ops \u7d50\u69cb\u7684\u51fd\u5f0f\u6307\u6a19\u5206\u6d3e\u547c\u53eb\u7684\u3002\n\n---\n\n**CALLERS:**\n```\nacs_request_scan\n```\n\n**CALLEES:**\n```\ndriver_nl80211_scan2        (via function pointer: .scan2 driver op)\nwpa_driver_privsep_scan     (via function pointer: .scan2 driver op)\nwpa_driver_wext_scan        (via function pointer: .scan2 driver op)\n```",
+  "stop_reason": "end_turn",
+  "session_id": "6000a3b2-3c89-4913-8ad4-18d158a824f9",
+  "total_cost_usd": 0.077742,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 9679,
+    "cache_read_input_tokens": 43670,
+    "output_tokens": 437,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 9679,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 1,
+        "output_tokens": 236,
+        "cache_read_input_tokens": 26497,
+        "cache_creation_input_tokens": 355,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 355
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-4-6": {
+      "inputTokens": 4,
+      "outputTokens": 437,
+      "cacheReadInputTokens": 43670,
+      "cacheCreationInputTokens": 9679,
+      "webSearchRequests": 0,
+      "costUSD": 0.077742,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "3ef8bdad-bd78-4ee5-9982-67723b2d91c0",
+  "_wall_s": 11.1
+}

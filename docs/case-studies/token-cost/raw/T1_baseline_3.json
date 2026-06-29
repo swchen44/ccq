@@ -1,0 +1,63 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 56484,
+  "duration_api_ms": 55826,
+  "ttft_ms": 2907,
+  "ttft_stream_ms": 2110,
+  "time_to_request_ms": 23,
+  "num_turns": 23,
+  "result": "\u6240\u6709\u547c\u53eb\u9ede\u7684\u51fd\u5f0f\u90fd\u5df2\u78ba\u8a8d\u3002\n\nCALLERS:\n```\nloadSingleAppendOnlyFile\nasmFeedMigrationClient\nluaRedisAclCheckCmdPermissionsCommand\nRM_Call\nRM_ACLCheckCommandPermissions\nRM_GetCommandKeysWithFlags\nscriptCall\n_serverAssertPrintClientInfo\nlogCurrentClient\naclCommand\npreprocessCommand\nprocessCommand\ngetKeysSubcommandImpl\n```",
+  "stop_reason": "end_turn",
+  "session_id": "c6afef6a-7d78-430d-9c43-9648622e7f02",
+  "total_cost_usd": 0.3244668,
+  "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 34835,
+    "cache_read_input_tokens": 180576,
+    "output_tokens": 4084,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 34835,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 1,
+        "output_tokens": 424,
+        "cache_read_input_tokens": 46923,
+        "cache_creation_input_tokens": 920,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 920
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-4-6": {
+      "inputTokens": 8,
+      "outputTokens": 4084,
+      "cacheReadInputTokens": 180576,
+      "cacheCreationInputTokens": 34835,
+      "webSearchRequests": 0,
+      "costUSD": 0.3244668,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "6ed5cfce-0469-4e50-99d0-1bf787f8311a",
+  "_wall_s": 58.3
+}

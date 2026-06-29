@@ -1,0 +1,63 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 76200,
+  "duration_api_ms": 75923,
+  "ttft_ms": 4037,
+  "ttft_stream_ms": 3629,
+  "time_to_request_ms": 54,
+  "num_turns": 19,
+  "result": "\u73fe\u5728\u6709\u5b8c\u6574\u7684\u547c\u53eb\u93c8\u3002\u4ee5\u4e0b\u662f\u7d50\u8ad6\uff1a\n\n`wpa_driver_wext_scan` \u900f\u904e\u51fd\u5f0f\u6307\u6a19 `.scan2` \u88ab\u547c\u53eb\uff0c\u6709\u4e09\u689d\u8def\u5f91\u901a\u5411\u5b83\uff1a\n\n**\u8def\u5f91\u4e00**\uff1a\u76f4\u63a5\u547c\u53eb `scan2`\n- `wpa_priv_cmd_scan`\uff08`wpa_priv.c:118`\uff09\n\n**\u8def\u5f91\u4e8c**\uff1a\u900f\u904e inline \u5305\u88dd\u51fd\u5f0f `wpa_drv_scan`\uff08`driver_i.h:90`\uff09\n- `wpas_trigger_scan_cb`\uff08`scan.c:149`\uff09\n- `wpas_p2p_trigger_scan_cb`\uff08`p2p_supplicant.c:283`\uff09\n- `wpas_p2p_join_scan_req`\uff08`p2p_supplicant.c:4715`\uff09\n\n**\u8def\u5f91\u4e09**\uff1a\u900f\u904e `hostapd_driver_scan`\uff08`ap_drv_ops.c:605`\uff09\n- `ap_ht40_scan_retry`\uff08`hw_features.c:425`\uff09\n- `ieee80211n_check_40mhz`\uff08`hw_features.c:470`\uff09\n- `acs_request_scan`\uff08`acs.c:879`\uff09\n\n---\n\nCALLERS:\nwpa_priv_cmd_scan\nwpas_trigger_scan_cb\nwpas_p2p_trigger_scan_cb\nwpas_p2p_join_scan_req\nap_ht40_scan_retry\nieee80211n_check_40mhz\nacs_request_scan",
+  "stop_reason": "end_turn",
+  "session_id": "2b3fd100-912d-46af-8d8b-b8c794de657e",
+  "total_cost_usd": 0.2039442,
+  "usage": {
+    "input_tokens": 10,
+    "cache_creation_input_tokens": 11413,
+    "cache_read_input_tokens": 238904,
+    "output_tokens": 4251,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 11413,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 1,
+        "output_tokens": 994,
+        "cache_read_input_tokens": 36745,
+        "cache_creation_input_tokens": 1091,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1091
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-4-6": {
+      "inputTokens": 10,
+      "outputTokens": 4251,
+      "cacheReadInputTokens": 238904,
+      "cacheCreationInputTokens": 11413,
+      "webSearchRequests": 0,
+      "costUSD": 0.2039442,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "a06c7933-14d6-49af-a416-5d11104224db",
+  "_wall_s": 78.0
+}

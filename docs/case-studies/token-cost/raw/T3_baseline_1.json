@@ -1,0 +1,63 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 73310,
+  "duration_api_ms": 71540,
+  "ttft_ms": 6591,
+  "ttft_stream_ms": 4641,
+  "time_to_request_ms": 54,
+  "num_turns": 5,
+  "result": "\u5df2\u6536\u96c6\u6240\u6709\u8cc7\u6599\uff0c\u5f59\u6574\u5b8c\u6574\u6e05\u55ae\uff1a\n\n**\u7b2c1\u5c64**\uff08\u76f4\u63a5\u547c\u53eb `lookupCommand`\uff09\uff1a\n- `luaRedisAclCheckCmdPermissionsCommand`\n- `asmFeedMigrationClient`\n- `loadSingleAppendOnlyFile`\n- `RM_Call`\n- `RM_ACLCheckCommandPermissions`\n- `RM_GetCommandKeysWithFlags`\n- `preprocessCommand`\n- `processCommand`\n- `getKeysSubcommandImpl`\n- `_serverAssertPrintClientInfo`\n- `logCurrentClient`\n- `scriptCall`\n- `aclCommand`\n\n**\u7b2c2\u5c64**\uff08\u547c\u53eb\u7b2c1\u5c64\u51fd\u5f0f\u8005\uff09\uff1a\n- `propagateNow` \u2190 `asmFeedMigrationClient`\n- `loadAppendOnlyFiles` \u2190 `loadSingleAppendOnlyFile`\n- `RM_GetCommandKeys` \u2190 `RM_GetCommandKeysWithFlags`\n- `processInputBuffer` \u2190 `preprocessCommand`\n- `getClientCachedKeyResult` \u2190 `preprocessCommand`\n- `processCommandAndResetClient` \u2190 `processCommand`\n- `commandGetKeysAndFlagsCommand` \u2190 `getKeysSubcommandImpl`\n- `getKeysSubcommand` \u2190 `getKeysSubcommandImpl`\n- `_serverAssertWithInfo` \u2190 `_serverAssertPrintClientInfo`\n- `printCrashReport` \u2190 `logCurrentClient`\n- `luaRedisGenericCommand` \u2190 `scriptCall`\n\n---\n\nAFFECTED:\nluaRedisAclCheckCmdPermissionsCommand\nasmFeedMigrationClient\nloadSingleAppendOnlyFile\nRM_Call\nRM_ACLCheckCommandPermissions\nRM_GetCommandKeysWithFlags\npreprocessCommand\nprocessCommand\ngetKeysSubcommandImpl\n_serverAssertPrintClientInfo\nlogCurrentClient\nscriptCall\naclCommand\npropagateNow\nloadAppendOnlyFiles\nRM_GetCommandKeys\nprocessInputBuffer\ngetClientCachedKeyResult\nprocessCommandAndResetClient\ncommandGetKeysAndFlagsCommand\ngetKeysSubcommand\n_serverAssertWithInfo\nprintCrashReport\nluaRedisGenericCommand",
+  "stop_reason": "end_turn",
+  "session_id": "3335d989-cdce-4a49-9210-25fc3adea084",
+  "total_cost_usd": 0.20324579999999998,
+  "usage": {
+    "input_tokens": 7,
+    "cache_creation_input_tokens": 15624,
+    "cache_read_input_tokens": 131486,
+    "output_tokens": 4669,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 15624,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 1,
+        "output_tokens": 2253,
+        "cache_read_input_tokens": 31405,
+        "cache_creation_input_tokens": 1392,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1392
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-4-6": {
+      "inputTokens": 7,
+      "outputTokens": 4669,
+      "cacheReadInputTokens": 131486,
+      "cacheCreationInputTokens": 15624,
+      "webSearchRequests": 0,
+      "costUSD": 0.20324579999999998,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "5b0a16e9-710e-4b45-8716-ce064b953125",
+  "_wall_s": 74.9
+}

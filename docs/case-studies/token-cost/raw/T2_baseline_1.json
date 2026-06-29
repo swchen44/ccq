@@ -1,0 +1,63 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 274639,
+  "duration_api_ms": 274200,
+  "ttft_ms": 4166,
+  "ttft_stream_ms": 2626,
+  "time_to_request_ms": 22,
+  "num_turns": 58,
+  "result": "\u73fe\u5728\u6211\u5df2\u8ffd\u6eaf\u5b8c\u6574\u547c\u53eb\u93c8\uff0c\u53ef\u4ee5\u6574\u7406\u51fa\u5b8c\u6574\u7684\u6709\u6548\u547c\u53eb\u8005\u5217\u8868\u3002\n\nCALLERS:\nwpa_drv_scan\nhostapd_driver_scan\nwpa_priv_cmd_scan\nwpas_trigger_scan_cb\nwpas_p2p_trigger_scan_cb\nwpas_p2p_join_scan_req\nacs_request_scan\nap_ht40_scan_retry\nieee80211n_check_40mhz\nwpa_priv_receive\nwpa_supplicant_trigger_scan\nwpas_p2p_scan\nwpas_p2p_scan_res_join\nwpas_p2p_join_scan\nwpas_p2p_join\nacs_scan_complete\nacs_init\nhostapd_check_ht_capab\nwpa_supplicant_scan\nbgscan_simple_timeout\nbgscan_learn_timeout\nsme_obss_scan_timeout\nwpas_dbus_handler_scan\n\n---\n\n\u547c\u53eb\u8def\u5f91\u8aaa\u660e\uff1a\n\n`wpa_driver_wext_scan` \u88ab\u6ce8\u518a\u70ba `.scan2` \u51fd\u6578\u6307\u91dd\uff08`driver_wext.c:2497`\uff09\uff0c\u6709\u4e09\u689d\u76f4\u63a5\u8abf\u7528\u8def\u5f91\uff1a\n\n1. **`wpa_drv_scan`**\uff08`driver_i.h` \u5167\u806f\u51fd\u6578\uff09\u2192 \u88ab `wpas_trigger_scan_cb`\u3001`wpas_p2p_trigger_scan_cb`\u3001`wpas_p2p_join_scan_req` \u547c\u53eb\u3002\u9019\u4e09\u8005\u53c8\u5206\u5225\u88ab `wpa_supplicant_trigger_scan`\u3001`wpas_p2p_scan` \u4ee5\u53ca\u591a\u500b P2P join \u51fd\u6578\u89f8\u767c\u3002`wpa_supplicant_trigger_scan` \u5247\u88ab `wpa_supplicant_scan`\u3001\u5169\u500b bgscan \u5b9a\u6642\u5668\u3001`sme_obss_scan_timeout`\u3001`wpas_dbus_handler_scan` \u547c\u53eb\u3002\n\n2. **`hostapd_driver_scan`**\uff08`ap_drv_ops.c`\uff09\u2192 \u88ab `acs_request_scan`\u3001`ap_ht40_scan_retry`\u3001`ieee80211n_check_40mhz` \u547c\u53eb\uff0c\u5f8c\u5169\u8005\u53c8\u5206\u5225\u88ab `acs_scan_complete`/`acs_init` \u53ca `hostapd_check_ht_capab` \u89f8\u767c\u3002\n\n3. **`wpa_priv_cmd_scan`**\uff08`wpa_priv.c`\uff09\u2192 \u88ab `wpa_priv_receive`\uff08socket \u4e8b\u4ef6\u56de\u8abf\uff0c\u8655\u7406 `PRIVSEP_CMD_SCAN` \u547d\u4ee4\uff09\u547c\u53eb\u3002",
+  "stop_reason": "end_turn",
+  "session_id": "09c69c5b-a2da-45a9-a988-8fe4b31e396b",
+  "total_cost_usd": 0.7837617,
+  "usage": {
+    "input_tokens": 18,
+    "cache_creation_input_tokens": 50004,
+    "cache_read_input_tokens": 653529,
+    "output_tokens": 19175,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 50004,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 1,
+        "output_tokens": 3234,
+        "cache_read_input_tokens": 66602,
+        "cache_creation_input_tokens": 575,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 575
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-4-6": {
+      "inputTokens": 18,
+      "outputTokens": 19175,
+      "cacheReadInputTokens": 653529,
+      "cacheCreationInputTokens": 50004,
+      "webSearchRequests": 0,
+      "costUSD": 0.7837617,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "b1650cbb-ad5e-43a7-9acd-bbd506c5cd91",
+  "_wall_s": 276.3
+}

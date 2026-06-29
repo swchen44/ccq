@@ -1,0 +1,63 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 91302,
+  "duration_api_ms": 90839,
+  "ttft_ms": 2958,
+  "ttft_stream_ms": 2048,
+  "time_to_request_ms": 62,
+  "num_turns": 22,
+  "result": "\u73fe\u5728\u6211\u6709\u5b8c\u6574\u8cc7\u8a0a\u4e86\u3002\u4ee5\u4e0b\u662f\u7d50\u679c\uff1a\n\n---\n\n`wpa_driver_wext_scan` \u88ab\u8ce6\u503c\u7d66 `wpa_driver_wext_ops.scan2`\uff08`driver_wext.c:2497`\uff09\u3002\u57f7\u884c\u6642\u771f\u6b63\u89f8\u767c\u5b83\u7684\u547c\u53eb\u93c8\u6709\u4e09\u689d\uff1a\n\n**\u76f4\u63a5\u547c\u53eb `->scan2()` \u7684\u5305\u88dd\u51fd\u5f0f\uff1a**\n- `wpa_drv_scan`\uff08`wpa_supplicant/driver_i.h:90`\uff0cinline\uff09\n- `hostapd_driver_scan`\uff08`src/ap/ap_drv_ops.c:605`\uff09\n- `wpa_priv_cmd_scan`\uff08`wpa_supplicant/wpa_priv.c:118`\uff09\n\n**\u547c\u53eb\u9019\u4e9b\u5305\u88dd\u51fd\u5f0f\u7684\u4e0a\u5c64\u51fd\u5f0f\uff1a**\n- `wpas_trigger_scan_cb` \u2192 `wpa_drv_scan`\uff08`scan.c:180`\uff09\n- `wpas_p2p_trigger_scan_cb` \u2192 `wpa_drv_scan`\uff08`p2p_supplicant.c:299`\uff09\n- `wpas_p2p_join_scan_req` \u2192 `wpa_drv_scan`\uff08`p2p_supplicant.c:4784`\uff09\n- `acs_request_scan` \u2192 `hostapd_driver_scan`\uff08`src/ap/acs.c:910`\uff09\n- `ap_ht40_scan_retry` \u2192 `hostapd_driver_scan`\uff08`src/ap/hw_features.c:438`\uff09\n- `ieee80211n_check_40mhz` \u2192 `hostapd_driver_scan`\uff08`src/ap/hw_features.c:487`\uff09\n- `wpa_priv_receive` \u2192 `wpa_priv_cmd_scan`\uff08`wpa_supplicant/wpa_priv.c:573`\uff09\n\n---\n\nCALLERS:\nwpa_drv_scan\nhostapd_driver_scan\nwpa_priv_cmd_scan\nwpas_trigger_scan_cb\nwpas_p2p_trigger_scan_cb\nwpas_p2p_join_scan_req\nacs_request_scan\nap_ht40_scan_retry\nieee80211n_check_40mhz\nwpa_priv_receive",
+  "stop_reason": "end_turn",
+  "session_id": "0d511db4-59e5-4693-9622-0a3e87c90a7b",
+  "total_cost_usd": 0.2356311,
+  "usage": {
+    "input_tokens": 11,
+    "cache_creation_input_tokens": 10520,
+    "cache_read_input_tokens": 273427,
+    "output_tokens": 6030,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 10520,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 1,
+        "output_tokens": 2104,
+        "cache_read_input_tokens": 36630,
+        "cache_creation_input_tokens": 313,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 313
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-4-6": {
+      "inputTokens": 11,
+      "outputTokens": 6030,
+      "cacheReadInputTokens": 273427,
+      "cacheCreationInputTokens": 10520,
+      "webSearchRequests": 0,
+      "costUSD": 0.2356311,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "636cce7d-497d-4954-9ba9-f3d75fa73127",
+  "_wall_s": 93.7
+}

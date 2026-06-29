@@ -1,0 +1,63 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 34125,
+  "duration_api_ms": 33929,
+  "ttft_ms": 3670,
+  "ttft_stream_ms": 2650,
+  "time_to_request_ms": 56,
+  "num_turns": 6,
+  "result": "\u5df2\u53d6\u5f97\u6240\u6709\u9700\u8981\u7684\u8cc7\u8a0a\u3002\n\n---\n\n**`hostapd_driver_scan`** \u5b9a\u7fa9\u65bc `src/ap/ap_drv_ops.c:605`\uff0c\u51fd\u5f0f\u9ad4\u5982\u4e0b\uff1a\n\n```c\nint hostapd_driver_scan(struct hostapd_data *hapd,\n            struct wpa_driver_scan_params *params)\n{\n    if (hapd->driver && hapd->driver->scan2)\n        return hapd->driver->scan2(hapd->drv_priv, params);\n    return -1;\n}\n```\n\n---\n\n**CALLERS:**\n- `acs_request_scan` (`src/ap/acs.c:910`)\n- `ap_ht40_scan_retry` (`src/ap/hw_features.c:438`)\n- `ieee80211n_check_40mhz` (`src/ap/hw_features.c:487`)\n\n**CALLEES:**\n- `hapd->driver->scan2` (\u51fd\u5f0f\u6307\u6a19\u5206\u6d3e\uff0c\u900f\u904e `struct wpa_driver_ops` \u7684 `scan2` \u6b04\u4f4d\uff0c\u5be6\u969b\u5be6\u4f5c\u56e0\u9a45\u52d5\u800c\u7570)",
+  "stop_reason": "end_turn",
+  "session_id": "9550471a-8b82-4994-9f75-0107afbbd619",
+  "total_cost_usd": 0.10102439999999999,
+  "usage": {
+    "input_tokens": 7,
+    "cache_creation_input_tokens": 5977,
+    "cache_read_input_tokens": 143338,
+    "output_tokens": 1476,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 5977,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 1,
+        "output_tokens": 620,
+        "cache_read_input_tokens": 32124,
+        "cache_creation_input_tokens": 282,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 282
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-4-6": {
+      "inputTokens": 7,
+      "outputTokens": 1476,
+      "cacheReadInputTokens": 143338,
+      "cacheCreationInputTokens": 5977,
+      "webSearchRequests": 0,
+      "costUSD": 0.10102439999999999,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "a68a2227-5f89-4d29-86d2-0267d9534e11",
+  "_wall_s": 35.5
+}

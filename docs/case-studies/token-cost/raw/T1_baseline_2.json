@@ -1,0 +1,63 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 73420,
+  "duration_api_ms": 73194,
+  "ttft_ms": 3884,
+  "ttft_stream_ms": 3880,
+  "time_to_request_ms": 57,
+  "num_turns": 25,
+  "result": "\u6240\u6709\u547c\u53eb\u9ede\u5df2\u78ba\u8a8d\u3002\n\nCALLERS:\n```\nluaRedisAclCheckCmdPermissionsCommand\nasmFeedMigrationClient\nloadSingleAppendOnlyFile\nRM_Call\nRM_ACLCheckCommandPermissions\nRM_GetCommandKeysWithFlags\n_serverAssertPrintClientInfo\nlogCurrentClient\nscriptCall\naclCommand\npreprocessCommand\nprocessCommand\ngetKeysSubcommandImpl\n```",
+  "stop_reason": "end_turn",
+  "session_id": "f9ad78a7-ccab-4308-994a-b1854a56bc75",
+  "total_cost_usd": 0.3087552,
+  "usage": {
+    "input_tokens": 9,
+    "cache_creation_input_tokens": 28859,
+    "cache_read_input_tokens": 222164,
+    "output_tokens": 4595,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 28859,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 1,
+        "output_tokens": 675,
+        "cache_read_input_tokens": 43955,
+        "cache_creation_input_tokens": 2077,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 2077
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-4-6": {
+      "inputTokens": 9,
+      "outputTokens": 4595,
+      "cacheReadInputTokens": 222164,
+      "cacheCreationInputTokens": 28859,
+      "webSearchRequests": 0,
+      "costUSD": 0.3087552,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "ec360523-00e3-4cb9-81f8-7bf586cc6474",
+  "_wall_s": 75.3
+}
