@@ -7,6 +7,8 @@
 
 它的目標是在三個主流「程式碼知識」工具的各自強項上對齊或勝出，同時維持一個**零相依的 Go binary**，可輕鬆部署到鎖定 / 內網（air-gapped）環境。
 
+> **支援語言：** C / C++（以及 clangd 也能解析的 Objective-C 與 CUDA）。其他語言 —— Rust、Go、Python… —— **刻意不在範圍內**；它們有各自的 language server（rust-analyzer、gopls…）。ccq 是 clangd 專精工具。
+
 ```
 ccq callers lookupCommand      # 誰呼叫它（函式級、跨檔）
 ccq explore processCommand     # 一次給：源碼 + callers + callees + blast-radius
@@ -120,7 +122,7 @@ prebuilt 與自行編譯**兩種都可離線**：要嘛把單一 prebuilt binary
 - Windows：安裝 LLVM（clangd.exe），或 VS 的 clangd 元件。
 
 ### 安裝 agent skill
-把 `SKILL.md` 複製到 agent 的 skills 目錄：
+把 `skills/ccq/SKILL.md` 複製到 agent 的 skills 目錄：
 - Claude Code：`~/.claude/skills/ccq/SKILL.md`
 - OpenCode / Codex：對應的專案/agent skills 目錄（見其文件）。
 

@@ -1,6 +1,6 @@
 ---
 name: ccq
-description: Use when navigating, understanding, or refactoring a C/C++ codebase — finding who calls a function, what a function calls, a symbol's definition/references, impact of a change, function-pointer dispatch (ops/vtable), or doing a safe symbol-level rename. Triggers on "誰呼叫", "who calls", "what calls X", "find definition of", "references to", "impact of changing", "trace the call graph", "重構/改名 a symbol", or any task that would otherwise need many grep/Read calls over C/C++ code. Prefer ccq over grep/Read for C/C++ structure questions — it is clangd-accurate (handles macros, #ifdef, typedef, _Generic) and token-efficient.
+description: Use when navigating, understanding, or refactoring a C/C++ codebase — finding who calls a function, what a function calls, a symbol's definition/references, impact of a change, function-pointer dispatch (ops/vtable), or doing a safe symbol-level rename. Triggers on "誰呼叫", "who calls", "what calls X", "find definition of", "references to", "impact of changing", "trace the call graph", "重構/改名 a symbol", or any task that would otherwise need many grep/Read calls over C/C++ code. Prefer ccq over grep/Read for C/C++ structure questions — it is clangd-accurate (handles macros, #ifdef, typedef, _Generic) and token-efficient. Scope: C/C++ only (plus Objective-C / CUDA via clangd) — NOT Rust, Go, Python, etc., which need their own language server.
 ---
 
 # ccq — clangd-powered C/C++ code intelligence

@@ -7,6 +7,8 @@
 
 It is built to match and beat the three popular "code knowledge" tools on their own turf, while staying a **zero-dependency Go binary** that is trivial to deploy on a locked-down/air-gapped intranet.
 
+> **Languages:** C / C++ (plus Objective-C and CUDA, which clangd also parses). Other languages — Rust, Go, Python, … — are **out of scope by design**; they have their own language servers (rust-analyzer, gopls, …). ccq is the clangd specialist.
+
 ```
 ccq callers lookupCommand      # who calls it (function-level, cross-file)
 ccq explore processCommand     # source + callers + callees + blast-radius, one shot
@@ -133,7 +135,7 @@ Because ccq has **no third-party Go modules**, `go build` needs no network — i
 - **Air-gapped:** copy the single `clangd` binary for your platform from an LLVM release; point ccq at it with `--clangd /path/to/clangd`.
 
 ### Install the agent skill
-Copy `SKILL.md` to your agent's skills directory:
+Copy `skills/ccq/SKILL.md` to your agent's skills directory:
 - Claude Code: `~/.claude/skills/ccq/SKILL.md`
 - OpenCode / Codex: the project/agent skills directory (see their docs).
 

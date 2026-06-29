@@ -17,7 +17,10 @@ if [ -f ./clangd ]; then
   echo "[ccq] bundled clangd -> $BIN/clangd (ccq auto-finds it next to itself)"
 fi
 # install skill for Claude Code
-SK="$HOME/.claude/skills/ccq"; mkdir -p "$SK"; cp SKILL.md "$SK/SKILL.md"
+SK="$HOME/.claude/skills/ccq"; mkdir -p "$SK"
+# source checkout keeps it at skills/ccq/SKILL.md; release archives flatten it to ./SKILL.md
+SRC_SKILL="SKILL.md"; [ -f skills/ccq/SKILL.md ] && SRC_SKILL="skills/ccq/SKILL.md"
+cp "$SRC_SKILL" "$SK/SKILL.md"
 echo "[ccq] skill -> $SK/SKILL.md"
 command -v clangd >/dev/null 2>&1 || [ -f "$BIN/clangd" ] && echo "[ccq] clangd: ok" || \
   echo "[ccq] WARNING: clangd not found — install LLVM/clangd, or use --clangd <path>"

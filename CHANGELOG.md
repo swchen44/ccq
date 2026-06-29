@@ -4,6 +4,14 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Changed
+- **Skill moved to `skills/ccq/SKILL.md`** in the repo (mirrors the install target and the
+  Claude skill convention). `install.sh`/`install.ps1` find it at either the new path (source
+  checkout) or the archive root (release archives stay flat); `build-release.sh` updated.
+### Docs
+- **Language scope made explicit**: ccq is **C/C++ only** (plus Objective-C/CUDA via clangd) —
+  Rust/Go/Python etc. are out of scope (their own LSP). Stated in the SKILL description and all
+  three READMEs.
 
 ## [0.6.1] — 2026-06-29
 ### Docs

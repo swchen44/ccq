@@ -77,7 +77,7 @@ for t in "${TARGETS[@]}"; do
   pkg="$OUT/$name"
   mkdir -p "$pkg"
   mv "$OUT/$bin" "$pkg/$bin"
-  cp SKILL.md README.md LICENSE "$pkg/"
+  cp skills/ccq/SKILL.md README.md LICENSE "$pkg/"  # flatten SKILL.md to archive root
   [ "$GOOS" = windows ] && cp install.ps1 "$pkg/" || cp install.sh "$pkg/"
   [ "$BUNDLE" = 1 ] && bundle_clangd "$pkg" "$GOOS" "$GOARCH"
 

@@ -14,7 +14,9 @@ if (Test-Path ./clangd.exe) {
   Write-Host "[ccq] bundled clangd -> $bin\clangd.exe (ccq auto-finds it next to itself)"
 }
 $sk = "$env:USERPROFILE\.claude\skills\ccq"; New-Item -ItemType Directory -Force -Path $sk | Out-Null
-Copy-Item SKILL.md "$sk\SKILL.md" -Force
+# source checkout keeps it at skills/ccq/SKILL.md; release archives flatten it to ./SKILL.md
+$srcSkill = if (Test-Path skills\ccq\SKILL.md) { "skills\ccq\SKILL.md" } else { "SKILL.md" }
+Copy-Item $srcSkill "$sk\SKILL.md" -Force
 Write-Host "[ccq] skill -> $sk\SKILL.md"
 if (Get-Command clangd -ErrorAction SilentlyContinue) { Write-Host "[ccq] clangd found" }
 else { Write-Host "[ccq] WARNING: clangd not found — install LLVM, or use --clangd <path>" }
