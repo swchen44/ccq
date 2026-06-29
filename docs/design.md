@@ -123,6 +123,15 @@ sequenceDiagram
 | rename | `textDocument/rename` |
 | index readiness | `$/progress` (window/workDoneProgress) |
 
+### MCP serving (`ccq mcp`)
+
+`ccq mcp` exposes the same query engine over the **Model Context Protocol** (JSON-RPC 2.0 over
+stdio) so MCP clients — and anyone used to CodeGraph — can drive ccq with no relearning. It is a
+thin adapter over the existing commands (no second engine): it advertises `explore` (headline),
+`callers`, `callees`, `def`, `refs`, `search`, `impact`, `symbols`, `macro` as tools, and each tool
+call runs the same code path as the CLI (warm daemon included). Zero extra dependencies — the
+JSON-RPC framing is hand-rolled in `internal/mcp`, consistent with the no-third-party-deps rule.
+
 ### Compile database & accuracy ladder
 | Config | How clangd behaves | Accuracy |
 |--------|-------------------|----------|

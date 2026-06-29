@@ -48,12 +48,18 @@ afterthought. All ROI assumptions are explicit and adjustable in the case study.
 | FR7 | One-shot context: source + callers + callees + blast-radius (`explore`) |
 | FR8 | File outline (`symbols`) |
 | FR9 | Macro expansion / signature (`macro`); macros searchable |
-| FR10 | Safe workspace-wide rename (`rename`, dry-run + `--apply`) |
-| FR11 | Resolve **function-pointer dispatch** (ops-struct → handler) that clangd alone won't |
-| FR12 | Export symbols + call graph as JSON/SQL for ad-hoc querying (`export`) |
+| FR10 | Symbol-level edits, dry-run + `--apply`: `rename` (workspace-wide), `replace-body`, `insert-before`/`insert-after` |
+| FR11 | Resolve **function-pointer dispatch** (ops-struct → handler) that clangd alone won't; optional `ccq.fnptr.json` override table |
+| FR12 | Export symbols + call graph as JSON/SQL **and a self-contained interactive HTML graph** (`export`); `--focus <sym>` for a neighborhood subgraph |
 | FR13 | Detect or generate a compile database (`init`): CMake/Meson/bear, or no-build `compile_flags.txt` |
 | FR14 | Warm daemon for sub-second repeated queries; `status`/`shutdown` |
 | FR15 | Ship an agent skill (`SKILL.md`) usable by Claude Code / Codex / OpenCode |
+| FR16 | Use compile databases of **any name** and **merge several** (multi-target builds) via `--compdb`; one warm clangd per config |
+| FR17 | **Index filter** via `ccq.json` `allow`/`deny` regex (`--config`), applied globally and to the compile DB handed to clangd; `ccq config` shows it |
+| FR18 | **Index-ready signal**: `wait-index` blocks until indexing is complete (`--background`, `--rebuild`); `status` reports `ready`/`indexing…`/`not running` |
+| FR19 | **Inspect/clean caches** (`cache list/clean/path`): daemon state, staged DBs, and clangd's `.cache/clangd` (warns on editor sharing) |
+| FR20 | **Diagnostics** (`doctor`): versions, config (+ regex errors), compile-DB mode, cache sizes, daemon state, with fix-it hints |
+| FR21 | **Serve over MCP** (`mcp`, JSON-RPC/stdio), CodeGraph-compatible tools, zero extra deps |
 
 ## 4. Non-functional requirements
 

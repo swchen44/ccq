@@ -11,6 +11,9 @@ All notable changes to ccq are documented here. Format follows
   Also: **predictability** — across 3 identical runs the baseline cost swings up to **15×** (CV ≈ 48%)
   while ccq is flat (CV ≈ 4%). Harness (`run_ab.py`) + raw runs reproducible. README "What it's worth"
   + requirement.md §1.1.
+- **doc sync for release** — requirement.md §3 functional requirements brought up to date
+  (`--compdb`, `ccq.json` filter, `wait-index`, `cache`, `doctor`, `mcp`, symbol edits, HTML export);
+  design.md §6 documents the `ccq mcp` serving mode.
 
 ## [0.6.0] — 2026-06-29
 ### Added
