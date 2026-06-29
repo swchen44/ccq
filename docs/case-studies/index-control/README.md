@@ -19,7 +19,7 @@ Start here when something looks off:
 $ ccq doctor
 ccq doctor
 
-  ccq version : ccq 0.5.0
+  ccq version : ccq 0.6.0
   OS / arch   : darwin/arm64
   project (-p): …/redis
   clangd      : ✓ /usr/bin/clangd
