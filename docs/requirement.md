@@ -7,6 +7,26 @@ token-efficient** navigation and refactoring of C/C++ codebases, packaged as a s
 zero-dependency binary that is trivial to deploy — including on locked-down / air-gapped
 intranets.
 
+## 1.1 Business case (why build & maintain it)
+
+The decision-maker's question — *"why another code tool, and what does maintaining it buy me?"* —
+is answered with a **measured** A/B, not assertion. Running the *same* Claude Code agent (same model,
+same prompt) with vs without `ccq` on `$PATH`, reading actual token/cost from each run
+([token-cost case study](case-studies/token-cost/README.md), N=3):
+
+- **Cost:** **2.1–12.4× cheaper per query** (6.7× over the suite); call-graph questions save the most.
+- **Tokens:** **1.8–7.9× fewer** per query. **Speed:** ~**6× faster** wall-clock.
+- **Completion:** on a **no-build** function-pointer task the agent scored **0% without ccq, 100%
+  with** — i.e. some questions are *silently answered wrong* without it (quality/risk, not just cost).
+
+**ROI vs maintenance:** at an illustrative 50 engineers × 10 queries/day, token savings alone are
+~$35k/yr (≈$175k on a frontier model) plus ~2,500 engineer-hours/yr; **even at one-tenth** of that it
+still clears ~$3.5k/yr + 250 hrs. The thing being maintained is **one zero-dependency Go binary + one
+skill file** built in CI — a small, fixed cost dwarfed by the per-query savings. **Half of target C
+code is no-build** (firmware/drivers with no `compile_commands.json`), which is exactly where the
+completion gap (fn-pointer dispatch) bites — so the no-build path is a first-class requirement, not an
+afterthought. All ROI assumptions are explicit and adjustable in the case study.
+
 ## 2. Personas
 
 | Persona | Need |

@@ -4,6 +4,11 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Docs
+- **token-cost case study + ROI** — a real Claude Code A/B (same model+prompt, `ccq` on/off,
+  measured from each run's token/cost JSON, N=3): **2.1–12.4× cheaper**, **1.8–7.9× fewer tokens**,
+  ~6× faster per query, and a no-build fn-pointer task the agent scored **0% without ccq, 100% with**.
+  Harness (`run_ab.py`) + raw runs are reproducible. README "What it's worth" + requirement.md §1.1.
 
 ## [0.6.0] — 2026-06-29
 ### Added

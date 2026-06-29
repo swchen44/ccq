@@ -48,6 +48,24 @@ tree-sitter extractor is an engine transplant whose endpoint is just a heavier c
 
 > Provenance: the design follows a head-to-head benchmark of cbm vs CodeGraph vs clangd vs traditional tools (cscope/ctags/cflow) on `wpa_supplicant` and `redis`. clangd + `compile_commands.json` won the call-graph, `#ifdef`, macro, `typedef` and `_Generic` dimensions; ccq packages that win and closes the one gap (fn-pointer dispatch).
 
+### What it's worth (measured, not claimed)
+
+A real Claude Code A/B — **same model, same prompt, the only difference is whether `ccq` is on
+`$PATH`** — measured straight from each run's token/cost JSON ([token-cost case study](docs/case-studies/token-cost/README.md)):
+
+| | with ccq vs grep+read |
+|---|---|
+| **Tokens / task** | **1.8–7.9× fewer** |
+| **Cost / task** | **2.1–12.4× cheaper** (6.7× over the suite) |
+| **Speed** | ~**6× faster** (e.g. 162s → 13s) |
+| **Completion** | a **no-build** fn-pointer task the agent scored **0% without ccq, 100% with** |
+
+So: an agent driving C/C++ with `ccq` is several times cheaper and faster per question — and on
+function-pointer dispatch in no-build code (drivers, ops tables, callbacks) it answers questions the
+grep+read agent gets *silently wrong*. Against that, ccq is one zero-dependency Go binary to maintain;
+even at one-tenth the assumed usage it pays for itself many times over. Full ROI model + honest
+caveats in the [case study](docs/case-studies/token-cost/README.md).
+
 ## Features
 
 **Navigate**
