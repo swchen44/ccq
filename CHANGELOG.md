@@ -4,6 +4,11 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Added
+- **npm distribution scaffold** (`npm/`) — scoped package `@swchen44/ccq` using the esbuild model:
+  a tiny launcher + five `os`/`cpu`-gated platform packages carrying the prebuilt binary (npm installs
+  only the matching one, no postinstall download). `npm/build-npm.sh` repackages the release binaries;
+  `npm/PUBLISHING.md` documents the account/login/publish steps. (clangd is still a separate runtime dep.)
 ### Changed
 - **Skill moved to `skills/ccq/SKILL.md`** in the repo (mirrors the install target and the
   Claude skill convention). `install.sh`/`install.ps1` find it at either the new path (source

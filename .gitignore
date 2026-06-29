@@ -4,5 +4,7 @@ ccq-*-*
 *.test
 .cache/
 dist/
+npm/dist/
+node_modules/
 cmd/ccq/testdata/cproj/compile_commands.json
 cmd/ccq/testdata/cproj/.cache/

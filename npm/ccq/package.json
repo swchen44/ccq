@@ -1,0 +1,18 @@
+{
+  "name": "@swchen44/ccq",
+  "version": "0.0.0",
+  "description": "clangd-powered C/C++ code intelligence CLI for AI agents (zero-dependency Go binary)",
+  "keywords": ["clangd", "c", "cpp", "call-graph", "lsp", "code-intelligence", "ai-agent", "cli"],
+  "homepage": "https://github.com/swchen44/ccq",
+  "repository": { "type": "git", "url": "https://github.com/swchen44/ccq.git" },
+  "license": "MIT",
+  "bin": { "ccq": "bin/ccq.js" },
+  "files": ["bin/ccq.js"],
+  "optionalDependencies": {
+    "@swchen44/ccq-darwin-x64": "0.0.0",
+    "@swchen44/ccq-darwin-arm64": "0.0.0",
+    "@swchen44/ccq-linux-x64": "0.0.0",
+    "@swchen44/ccq-linux-arm64": "0.0.0",
+    "@swchen44/ccq-win32-x64": "0.0.0"
+  }
+}
