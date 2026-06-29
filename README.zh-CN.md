@@ -254,7 +254,8 @@ make fmt               # gofmt -w .
 
 | 版本 | 日期 | 重点 |
 |------|------|------|
-| [**0.6.1**](https://github.com/swchen44/ccq/releases/tag/v0.6.1) | 2026-06-29 | 文档:实测 ROI case study(token/成本/完成度/可预测性 A/B);requirement 与 design 同步 |
+| [**0.6.2**](https://github.com/swchen44/ccq/releases/tag/v0.6.2) | 2026-06-30 | npm 安装(`npm i -g @swchen44/ccq`);skill 移到 `skills/ccq/`;明确 C/C++ only 语言范围 |
+| [0.6.1](https://github.com/swchen44/ccq/releases/tag/v0.6.1) | 2026-06-29 | 文档:实测 ROI case study(token/成本/完成度/可预测性 A/B);requirement 与 design 同步 |
 | [0.6.0](https://github.com/swchen44/ccq/releases/tag/v0.6.0) | 2026-06-29 | `ccq mcp`;`--compdb`(多 target);`ccq.json` allow/deny 索引过滤;`wait-index`;`cache`;`doctor` |
 | [0.5.0](https://github.com/swchen44/ccq/releases/tag/v0.5.0) | 2026-06-28 | --incremental 懒开索引(只开变动文件;热重启 ~2.4× 快,opt-in) |
 | [0.4.0](https://github.com/swchen44/ccq/releases/tag/v0.4.0) | 2026-06-28 | fn-pointer 对照表、replace-body/insert、callees body-scan 修正、git-diff 热重启 |

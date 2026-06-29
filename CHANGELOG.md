@@ -4,8 +4,14 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.6.2] — 2026-06-30
 ### Added
-- **npm distribution scaffold** (`npm/`) — scoped package `@swchen44/ccq` using the esbuild model:
+- **npm distribution** — install with **`npm i -g @swchen44/ccq`** (or `npx @swchen44/ccq`). Scoped
+  package using the esbuild model: a tiny launcher + five `os`/`cpu`-gated platform packages carrying
+  the prebuilt binary (npm installs only the matching one, no postinstall download). `npm/build-npm.sh`
+  repackages the release binaries and the `release` workflow auto-publishes on tag.
+  (clangd is still a separate runtime dependency.)
   a tiny launcher + five `os`/`cpu`-gated platform packages carrying the prebuilt binary (npm installs
   only the matching one, no postinstall download). `npm/build-npm.sh` repackages the release binaries;
   `npm/PUBLISHING.md` documents the account/login/publish steps. (clangd is still a separate runtime dep.)
@@ -144,7 +150,8 @@ All notable changes to ccq are documented here. Format follows
   `compile_commands.json` auto-detect (CMake/Meson/bear), agent SKILL.md.
   Single static Go binary, zero dependencies, cross-platform.
 
-[Unreleased]: https://github.com/swchen44/ccq/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/swchen44/ccq/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/swchen44/ccq/releases/tag/v0.6.2
 [0.6.1]: https://github.com/swchen44/ccq/releases/tag/v0.6.1
 [0.6.0]: https://github.com/swchen44/ccq/releases/tag/v0.6.0
 [0.5.0]: https://github.com/swchen44/ccq/releases/tag/v0.5.0
