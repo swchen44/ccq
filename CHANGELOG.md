@@ -9,6 +9,7 @@ All notable changes to ccq are documented here. Format follows
   a tiny launcher + five `os`/`cpu`-gated platform packages carrying the prebuilt binary (npm installs
   only the matching one, no postinstall download). `npm/build-npm.sh` repackages the release binaries;
   `npm/PUBLISHING.md` documents the account/login/publish steps. (clangd is still a separate runtime dep.)
+  **Published: `npm i -g @swchen44/ccq`** (all 5 platforms live at 0.6.1).
 ### Changed
 - **Skill moved to `skills/ccq/SKILL.md`** in the repo (mirrors the install target and the
   Claude skill convention). `install.sh`/`install.ps1` find it at either the new path (source

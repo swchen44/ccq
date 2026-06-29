@@ -120,6 +120,12 @@ caveats in the [case study](docs/case-studies/token-cost/README.md).
 
 ccq is a single static Go binary. **clangd is the only external dependency.**
 
+### npm (quickest, for connected machines)
+```bash
+npm i -g @swchen44/ccq      # or: npx @swchen44/ccq <cmd>
+```
+npm installs only the prebuilt binary for your platform (darwin/linux x64+arm64, win32 x64). You still need `clangd` on PATH. For air-gapped/intranet, prefer the source or prebuilt-binary install below (npm needs a registry).
+
 ### From source (recommended for intranet/air-gapped)
 ```bash
 git clone https://github.com/swchen44/ccq && cd ccq
