@@ -58,6 +58,7 @@ A real Claude Code A/B — **same model, same prompt, the only difference is whe
 | **Tokens / task** | **1.8–7.9× fewer** |
 | **Cost / task** | **2.1–12.4× cheaper** (6.7× over the suite) |
 | **Speed** | ~**6× faster** (e.g. 162s → 13s) |
+| **Predictability** | identical runs swing up to **15×** without ccq; ~**flat** with it |
 | **Completion** | a **no-build** fn-pointer task the agent scored **0% without ccq, 100% with** |
 
 So: an agent driving C/C++ with `ccq` is several times cheaper and faster per question — and on

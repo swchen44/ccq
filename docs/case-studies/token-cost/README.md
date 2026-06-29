@@ -21,6 +21,7 @@ ground truth, and repeat **N=3** per cell. Raw per-run JSON is kept under [`raw/
 | **Dollar cost** | **2.1×–12.4× cheaper** per task; **6.7× cheaper** over the whole suite ($5.47 → $0.81) |
 | **Speed** | ~**6× faster** wall-clock (e.g. 162s → 13s on blast-radius) |
 | **Completion** | one no-build task the agent **could not solve at all without ccq** (0% vs 100%) |
+| **Predictability** | across 3 identical runs, baseline cost swings up to **15×** (CV ≈ 48%); ccq is **flat** (CV ≈ 4%) |
 | **Turns** | grep+read loops for **9–33 tool turns**; ccq answers in **2–4** |
 
 These hold even though Claude Sonnet is a strong model that *can* grep-and-read its way to most
@@ -71,6 +72,28 @@ found the indirect call site and stopped there — across **all 3 runs** it answ
 **every time (100%)**. This is the structural blind spot of grep/read: *runtime function-pointer
 dispatch is invisible to text search*, and it's exactly where no-build C (drivers, ops tables,
 callbacks) lives. No amount of extra tokens fixes a 0%.
+
+## The third axis: predictability (variance across identical runs)
+
+Average cost is half the story. We ran each task **3 times, identically** — does the cost hold steady?
+For the baseline it does **not**: same question, wildly different bills depending on which grep/read
+rabbit holes the agent wanders into. ccq stays flat because it offloads the *search* to a
+deterministic index — the agent makes the same ~2 tool calls every time.
+
+| Task | baseline runs (tokens) | baseline max/min | ccq runs (tokens) | ccq max/min |
+|------|------------------------|-----------------:|-------------------|------------:|
+| T1 | 219k / 255k / 404k | 1.8× | 53k / 53k / 53k | 1.0× |
+| T2 | 254k / 289k / 722k | 2.8× | 53k / 53k / 53k | 1.0× |
+| T3 | **65k / 151k / 1,002k** | **15.4×** | 54k / 54k / 54k | 1.0× |
+| T4 | 152k / 188k / 195k | 1.3× | 56k / 56k / 56k | 1.0× |
+| T5 | 32k / 150k / 150k | 4.7× | 53k / 53k / 82k | 1.5× |
+| **mean** | — | **5.2×** | — | **1.1×** |
+
+**Coefficient of variation: baseline ≈ 48%, ccq ≈ 4%.** The extreme is T3 (transitive blast radius):
+the *same* question cost **65k tokens on a lucky run and 1,002k on an unlucky one** — a 15× swing,
+because the baseline agent's cost depends on how deep its recursive grep/read goes. ccq answered it in
+54k ± 0.1% every time. For anyone **budgeting** agent spend, this matters as much as the mean: ccq
+turns a slot-machine cost into a flat, forecastable one.
 
 ## ROI — what a decision-maker actually wants
 
