@@ -12,6 +12,7 @@ exercise found (writing a case study is itself a test).
 | [safe-refactor](safe-refactor/README.md) | ctest8 | the **editing** dimension (Serena-parity): `impact` → `rename` → `replace-body` — scope-correct rename, symbol-level body rewrite; found & fixed a warm-daemon staleness bug + documented the macro-body rename limit |
 | [intranet-no-build](intranet-no-build/README.md) | wpa_supplicant | the **air-gapped / no-build** dimension: zero-dependency install, `ccq init` → `compile_flags.txt`, fn-pointer dispatch without a build, the accuracy tradeoff; found & fixed a hidden no-build-warning bug |
 | [multi-target-compdb](multi-target-compdb/README.md) | synthetic 8-folder / 3-exe | the **multi-target build** dimension: `--compdb` merges several renamed `compile_commands.json`, one warm clangd per config, and the **first-`--compdb`-wins** rule for files shared across targets |
+| [index-control](index-control/README.md) | redis | the **operations** dimension on a big repo: `ccq.json` allow/deny index filter, `ccq wait-index` (know the index is ready before querying), `ccq cache` (inspect/clean), `ccq doctor` (diagnose) |
 
 ## Test rigor
 

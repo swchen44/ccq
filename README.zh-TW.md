@@ -218,7 +218,7 @@ make fmt               # gofmt -w .
 - **單元測試**零相依（stdlib `testing`）：`internal/fnptr`（cross-bleed / positional / field←field）、`internal/compdb`、`internal/lsp`、`internal/cmd`。
 - **整合測試**用 `//go:build integration` gate，clangd 不在 PATH 時 skip。
 - CI（`.github/workflows/ci.yml`）每次 push/PR 跑 gofmt 檢查、`go vet`、golangci-lint、單元測試、整合測試（會裝 clangd）、全平台交叉編譯。
-- 除了測試套件，[case studies](docs/case-studies/) 在真實 repo（redis、wpa_supplicant）實跑 ccq —— **抓到並修了 8 個單元測試漏掉的真 bug**（[bugs-found.md](docs/case-studies/bugs-found.md)）。寫 case study 本身就是測試。
+- 除了測試套件，[case studies](docs/case-studies/) 在真實 repo（redis、wpa_supplicant）實跑 ccq —— **抓到並修了 9 個單元測試漏掉的真 bug**（[bugs-found.md](docs/case-studies/bugs-found.md)）。寫 case study 本身就是測試。
 
 ### 釋出流程與版本
 - **Stable**：`git tag vX.Y.Z && git push origin vX.Y.Z` → `release.yml` 編全平台並發 GitHub Release（SemVer；見 `CHANGELOG.md`）。

@@ -1,14 +1,15 @@
 # Bugs found by writing the case studies
 
 The [case studies](README.md) are run on **real codebases** (redis, wpa_supplicant, ctest8). Doing
-that — not just unit-testing — surfaced **8 real bugs**, all now fixed. The pattern is consistent:
-the unit + integration tests stayed green throughout, because these are **clangd-integration and
-daemon-lifecycle** issues that only appear when you drive real repos end-to-end.
+that — not just unit-testing — surfaced **9 real bugs**, all now fixed. The pattern is consistent:
+the unit + integration tests stayed green on the *author's* machine throughout, because these are
+**clangd-integration and daemon-lifecycle** issues that only appear when you drive real repos
+end-to-end (and, for #9, on a *different clangd version* in CI).
 
 > Writing a case study *is* a test. Every bug below was found by running ccq for the narrative, not
 > by a failing assertion.
 
-## The 8
+## The 9
 
 | # | Symptom (on a real repo) | Root cause | Fix | Surfaced by |
 |---|---------------------------|-----------|-----|-------------|
@@ -20,6 +21,7 @@ daemon-lifecycle** issues that only appear when you drive real repos end-to-end.
 | 6 | `export`/`symbols` **line numbers always 1**; `replace-body` targeted the wrong range | clangd returns flat `SymbolInformation` (range in `location.range`), code read a top-level `range` (always 0) | parse `location.range` · [`8d6870d`](https://github.com/swchen44/ccq/commit/8d6870d) | building replace-body |
 | 7 | After `rename --apply`, the same daemon returned `callers <new>` = **(none)** and `replace-body <new>` = **not found** | apply wrote files on disk but didn't tell clangd; the warm index was pre-edit | re-sync clangd (`didChange`) + drop fnptr cache after apply · [`61b580d`](https://github.com/swchen44/ccq/commit/61b580d) | safe-refactor (ctest8) |
 | 8 | No-build / degraded **warning hidden** in the default daemon path | the note printed only on the `--no-daemon` inline path | warn for every query, daemon + inline · [`8fec1e5`](https://github.com/swchen44/ccq/commit/8fec1e5) | intranet-no-build (wpa) |
+| 9 | `ccq.json` **deny didn't exclude** a file (its symbols still resolved) | the filter gated `OpenAll`, but clangd *also* background-indexes every TU in `compile_commands.json` — denied files were indexed anyway. Local clangd 17 hid it; **CI clangd 18 caught it** | `compdb.ApplyFilter` stages a compile DB with denied entries removed · [`b4f4524`](https://github.com/swchen44/ccq/commit/b4f4524) | index-control (redis) / CI |
 
 ## Regression tests — each bug is now pinned
 
@@ -36,6 +38,7 @@ Every bug above has a test so it can't silently come back (`go test ./...` for u
 | 6 | `TestRegrSymbolsLineNumbers` (integration) |
 | 7 | `TestRegrDaemonSyncAfterApply` (integration · exercises the warm daemon) |
 | 8 | `TestRegrNoBuildWarningInDaemon` (integration) |
+| 9 | `TestConfigDenyFilter` (integration · the test CI's clangd 18 failed before the fix) |
 
 The integration ones live in `cmd/ccq/regression_test.go`; they build ccq once and drive it over a
 real clangd, mirroring how the bugs were found.
@@ -51,6 +54,8 @@ These cluster into three areas that a unit test on a fixture won't catch:
   across *repeated* queries on a *persistent* process; a one-shot test never exercises them.
 - **Scale & UX** (#4 timeout, #5 broken render, #8 hidden warning) — only a large repo times out,
   only a browser shows a broken graph, only the default path reveals a missing warning.
+- **Environment differences** (#9) — a *newer clangd in CI* (18 vs the author's 17) background-indexed
+  more aggressively and exposed a filter gap the local machine hid. CI across clangd versions matters.
 
 ## Takeaway
 
