@@ -40,11 +40,13 @@ type fieldInfo struct {
 
 var (
 	reTypedefFn    = regexp.MustCompile(`typedef\s+[\w\s\*]+\(\s*\*\s*(\w+)\s*\)\s*\(`)
-	reStructHdr    = regexp.MustCompile(`\bstruct\s+(\w+)\s*\{`)
-	reFieldFnPtr   = regexp.MustCompile(`\(\s*\*\s*(\w+)\s*\)\s*\(`) // RET (*name)(...)
-	reInitHdr      = regexp.MustCompile(`\bstruct\s+(\w+)\s+\w+(?:\[\s*\w*\s*\])?\s*=\s*\{`)
-	reDesignated   = regexp.MustCompile(`^\.\s*(\w+)\s*=\s*&?\s*(\w+)\s*$`)
+	reStructAny    = regexp.MustCompile(`(typedef\s+)?struct\s+(\w*)\s*\{`)                        // [typedef] struct [TAG] {
+	reFieldFnPtr   = regexp.MustCompile(`\(\s*\*\s*(\w+)\s*\)\s*\(`)                               // RET (*name)(...)
+	reInitHdr      = regexp.MustCompile(`(?:struct\s+)?(\w+)\s+\w+\s*(?:\[\s*\w*\s*\])?\s*=\s*\{`) // [struct] TYPE name[] = {
+	reDesignated   = regexp.MustCompile(`^\.\s*(\w+)\s*=\s*(.+)$`)                                 // .field = <value>
 	reIdent        = regexp.MustCompile(`^&?\s*(\w+)\s*$`)
+	reCast         = regexp.MustCompile(`^\(\s*[\w\s\*]+\)\s*(.+)$`) // (type) expr  -> expr
+	reMacro1       = regexp.MustCompile(`^(\w+)\s*\(\s*(.+?)\s*\)$`) // MACRO(inner)
 	reDispatch     = regexp.MustCompile(`(\w+)\s*(?:->|\.)\s*(\w+)\s*\(`)
 	reFieldAssign  = regexp.MustCompile(`(\w+)\s*(?:->|\.)\s*(\w+)\s*=\s*(\w+)\s*(?:->|\.)\s*(\w+)`)
 	reFuncDefBrace = regexp.MustCompile(`\b([A-Za-z_]\w*)\s*\([^()]*\)\s*\{`)
@@ -306,42 +308,57 @@ func (ix *index) mergeTable(t *Table) {
 }
 
 func (ix *index) scanStructs(f string) {
-	lines := ix.lines[f]
-	joined := strings.Join(lines, "\n")
-	for _, loc := range reStructHdr.FindAllStringSubmatchIndex(joined, -1) {
-		name := joined[loc[2]:loc[3]]
-		body, ok := braceBody(joined, loc[1]-1)
+	joined := stripComments(strings.Join(ix.lines[f], "\n"))
+	for _, loc := range reStructAny.FindAllStringSubmatchIndex(joined, -1) {
+		isTypedef := loc[2] >= 0 // group 1 (typedef) present
+		tag := joined[loc[4]:loc[5]]
+		body, end, ok := braceBodyEnd(joined, loc[1]-1)
 		if !ok {
 			continue
 		}
-		var fields []fieldInfo
-		idx := 0
-		for _, decl := range strings.Split(body, ";") {
-			decl = strings.TrimSpace(stripComment(decl))
-			if decl == "" {
-				continue
-			}
-			fi := fieldInfo{Index: idx}
-			if m := reFieldFnPtr.FindStringSubmatch(decl); m != nil {
-				fi.Name = m[1]
-				fi.FnPtr = true
-			} else {
-				// typedef'd fn-pointer field:  HOOK_T name;
-				toks := strings.Fields(decl)
-				if len(toks) >= 2 {
-					fi.Name = strings.Trim(toks[len(toks)-1], "*[]")
-					if ix.fnPtrTypedefs[toks[0]] {
-						fi.FnPtr = true
-					}
-				}
-			}
-			if fi.Name != "" {
-				fields = append(fields, fi)
-				idx++
+		fields := ix.parseStructFields(body)
+		if tag != "" {
+			ix.structLayout[tag] = fields
+		}
+		// `typedef struct [TAG] { ... } ALIAS;` — also key the layout by ALIAS
+		if isTypedef {
+			if alias := firstIdentAfter(joined, end); alias != "" {
+				ix.structLayout[alias] = fields
 			}
 		}
-		ix.structLayout[name] = fields
 	}
+}
+
+// parseStructFields turns a struct body into ordered fields, marking fn-pointer
+// fields (inline `RET (*name)(...)` or a typedef'd fn-pointer type).
+func (ix *index) parseStructFields(body string) []fieldInfo {
+	var fields []fieldInfo
+	idx := 0
+	for _, decl := range strings.Split(body, ";") {
+		decl = strings.TrimSpace(decl)
+		if decl == "" {
+			continue
+		}
+		fi := fieldInfo{Index: idx}
+		if m := reFieldFnPtr.FindStringSubmatch(decl); m != nil {
+			fi.Name = m[1]
+			fi.FnPtr = true
+		} else {
+			// typedef'd fn-pointer field:  HOOK_T name;
+			toks := strings.Fields(decl)
+			if len(toks) >= 2 {
+				fi.Name = strings.Trim(toks[len(toks)-1], "*[]")
+				if ix.fnPtrTypedefs[toks[0]] {
+					fi.FnPtr = true
+				}
+			}
+		}
+		if fi.Name != "" {
+			fields = append(fields, fi)
+			idx++
+		}
+	}
+	return fields
 }
 
 func (ix *index) fnPtrField(st, field string) bool {
@@ -364,8 +381,7 @@ func (ix *index) addReg(st, field, fn string) {
 }
 
 func (ix *index) scanRegistrations(f string) {
-	lines := ix.lines[f]
-	joined := strings.Join(lines, "\n")
+	joined := stripComments(strings.Join(ix.lines[f], "\n"))
 	for _, loc := range reInitHdr.FindAllStringSubmatchIndex(joined, -1) {
 		st := joined[loc[2]:loc[3]]
 		layout := ix.structLayout[st]
@@ -376,36 +392,14 @@ func (ix *index) scanRegistrations(f string) {
 		if !ok {
 			continue
 		}
-		// items may themselves be braces (tables); flatten top-level commas
-		pos := 0
-		for _, item := range splitTopLevel(body) {
-			item = strings.TrimSpace(stripComment(item))
-			if item == "" {
-				continue
-			}
-			// nested braces -> a table row: recurse one level positionally
-			if strings.HasPrefix(item, "{") {
-				ix.scanRow(st, layout, strings.Trim(item, "{} "))
-				continue
-			}
-			if m := reDesignated.FindStringSubmatch(item); m != nil {
-				if ix.fnPtrField(st, m[1]) {
-					ix.addReg(st, m[1], m[2])
-				}
-				continue
-			}
-			// positional at top level
-			if pos < len(layout) && layout[pos].FnPtr {
-				if id := reIdent.FindStringSubmatch(item); id != nil {
-					ix.addReg(st, layout[pos].Name, id[1])
-				}
-			}
-			pos++
-		}
+		ix.scanRow(st, layout, body) // top level is just a (possibly nested) row
 	}
 }
 
-// scanRow handles one positional/designated row of a table initializer.
+// scanRow handles one positional/designated row of a struct/table initializer.
+// Items may be designated (`.f = h`), positional, or a nested brace (a table row
+// or a brace-wrapped scalar for the current field). pos tracks the positional
+// cursor; a designated entry moves it past that field's index (C semantics).
 func (ix *index) scanRow(st string, layout []fieldInfo, row string) {
 	pos := 0
 	for _, item := range splitTopLevel(row) {
@@ -413,19 +407,66 @@ func (ix *index) scanRow(st string, layout []fieldInfo, row string) {
 		if item == "" {
 			continue
 		}
-		if m := reDesignated.FindStringSubmatch(item); m != nil {
-			if ix.fnPtrField(st, m[1]) {
-				ix.addReg(st, m[1], m[2])
+		if strings.HasPrefix(item, "{") {
+			inner := strings.Trim(item, "{} ")
+			if strings.ContainsAny(inner, ",{") { // genuine nested row
+				ix.scanRow(st, layout, inner)
+			} else { // brace-wrapped scalar for the current field
+				ix.placePositional(st, layout, pos, inner)
 			}
+			pos++
 			continue
 		}
-		if pos < len(layout) && layout[pos].FnPtr {
-			if id := reIdent.FindStringSubmatch(item); id != nil {
-				ix.addReg(st, layout[pos].Name, id[1])
+		if m := reDesignated.FindStringSubmatch(item); m != nil {
+			if ix.fnPtrField(st, m[1]) {
+				if h := handlerIdent(m[2]); h != "" {
+					ix.addReg(st, m[1], h)
+				}
 			}
+			pos = ix.fieldIndex(st, m[1]) + 1 // positional continues after this field
+			continue
 		}
+		ix.placePositional(st, layout, pos, item)
 		pos++
 	}
+}
+
+// placePositional registers item to layout[pos] if that field is a fn-pointer.
+func (ix *index) placePositional(st string, layout []fieldInfo, pos int, item string) {
+	if pos >= 0 && pos < len(layout) && layout[pos].FnPtr {
+		if h := handlerIdent(item); h != "" {
+			ix.addReg(st, layout[pos].Name, h)
+		}
+	}
+}
+
+func (ix *index) fieldIndex(st, field string) int {
+	for _, fi := range ix.structLayout[st] {
+		if fi.Name == field {
+			return fi.Index
+		}
+	}
+	return -1
+}
+
+// handlerIdent extracts a function identifier from a registration value, peeling
+// an optional leading cast `(type)` and one-arg macro `WRAP(fn)`. Returns "" if
+// it isn't a bare identifier (the real-function gate in addReg filters the rest).
+func handlerIdent(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.TrimSpace(strings.TrimPrefix(s, "&"))
+	if m := reCast.FindStringSubmatch(s); m != nil { // (type) X -> X
+		s = strings.TrimSpace(m[1])
+	}
+	if m := reIdent.FindStringSubmatch(s); m != nil { // bare ident
+		return m[1]
+	}
+	if m := reMacro1.FindStringSubmatch(s); m != nil { // MACRO(inner)
+		if mm := reIdent.FindStringSubmatch(strings.TrimSpace(m[2])); mm != nil {
+			return mm[1]
+		}
+	}
+	return ""
 }
 
 type prop struct{ to, from reg }
@@ -498,6 +539,85 @@ func stripComment(s string) string {
 		s = s[:a] + s[a+b+2:]
 	}
 	return s
+}
+
+// stripComments removes // and (multi-line) /* */ comments from a whole block,
+// preserving newlines so line numbers stay aligned. Used before the join-based
+// struct/registration scans so comment commas/braces can't corrupt splitting.
+func stripComments(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] == '/' && i+1 < len(s) && s[i+1] == '*' {
+			j := strings.Index(s[i+2:], "*/")
+			seg := s[i:]
+			if j >= 0 {
+				seg = s[i : i+2+j+2]
+			}
+			for _, r := range seg { // keep the comment's newlines
+				if r == '\n' {
+					b.WriteByte('\n')
+				}
+			}
+			if j < 0 {
+				break
+			}
+			i += 2 + j + 2
+			continue
+		}
+		if s[i] == '/' && i+1 < len(s) && s[i+1] == '/' {
+			for i < len(s) && s[i] != '\n' {
+				i++
+			}
+			continue
+		}
+		b.WriteByte(s[i])
+		i++
+	}
+	return b.String()
+}
+
+// firstIdentAfter returns the first identifier at/after pos (skipping `*` and
+// spaces) — used to read the ALIAS in `typedef struct {...} ALIAS;`.
+func firstIdentAfter(src string, pos int) string {
+	i := pos
+	for i < len(src) && (src[i] == ' ' || src[i] == '\t' || src[i] == '\n' || src[i] == '*' || src[i] == '\r') {
+		i++
+	}
+	j := i
+	for j < len(src) && (isWordByte(src[j])) {
+		j++
+	}
+	if j > i {
+		return src[i:j]
+	}
+	return ""
+}
+
+func isWordByte(c byte) bool {
+	return c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+}
+
+// braceBodyEnd is braceBody plus the index just past the matching `}`.
+func braceBodyEnd(src string, open int) (body string, end int, ok bool) {
+	for open < len(src) && src[open] != '{' {
+		open++
+	}
+	if open >= len(src) {
+		return "", 0, false
+	}
+	depth := 0
+	for i := open; i < len(src); i++ {
+		switch src[i] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return src[open+1 : i], i + 1, true
+			}
+		}
+	}
+	return "", 0, false
 }
 
 // braceBody returns the text inside the braces that open at/after `open`.

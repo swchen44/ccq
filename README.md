@@ -352,7 +352,8 @@ Full notes: [CHANGELOG.md](CHANGELOG.md). Latest binaries: [Releases](https://gi
 - [x] Scoped `ccq export --focus <sym>` — neighborhood instead of whole-repo (fast on large trees) — *done; parallel whole-repo export still TODO*
 - [x] `ccq export --format html` — emit the interactive graph directly — *done; see [case studies](docs/case-studies/)*
 - [ ] More build systems (Bazel, xmake) for `ccq init`
-- [ ] fn-pointer heuristic: positional-table edge cases, comment-aware multi-line registrations
+- [x] fn-pointer heuristic: positional-table edge cases (typedef-typed tables, nested rows,
+      designated+positional mix, cast/macro-wrapped handlers) + comment/multi-line-aware parsing — *done in 0.6.3*
 
 ## License
 MIT. Reuses architecture ideas validated by `troberti/clangd-query` (MIT), `mpsm/mcp-cpp`, and `2015xli/clangd-graph-rag`.

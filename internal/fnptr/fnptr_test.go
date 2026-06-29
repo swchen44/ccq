@@ -82,6 +82,57 @@ func TestCalleesReverse(t *testing.T) {
 	}
 }
 
+// --- edge cases: positional-table forms + comment/multi-line awareness ---
+
+// TestTypedefTable: a positional table over a typedef'd (anonymous) struct type,
+// initialized WITHOUT the `struct` keyword (`tcmd_t tcmds[] = {...}`).
+func TestTypedefTable(t *testing.T) {
+	if !hasCaller(t, "tc_add", "t_dispatch") {
+		t.Error("tc_add should be reached from t_dispatch via typedef-typed positional table tcmd_t.run")
+	}
+	if !hasCaller(t, "tc_rm", "t_dispatch") {
+		t.Error("tc_rm should be reached from t_dispatch via typedef-typed positional table tcmd_t.run")
+	}
+}
+
+// TestNestedTableRow: a row with a brace-wrapped scalar in the fn slot
+// ({ "g", { gc_a } }) must recurse into the nested brace.
+func TestNestedTableRow(t *testing.T) {
+	if !hasCaller(t, "gc_a", "g_dispatch") {
+		t.Error("gc_a should be reached from g_dispatch via nested-brace positional row gcmd.fn")
+	}
+}
+
+// TestMixedDesignatedPositional: after `.a = mxd_a`, the positional `mxd_b`
+// initializes field b (not a).
+func TestMixedDesignatedPositional(t *testing.T) {
+	if !hasCaller(t, "mxd_a", "mxd_dispa") {
+		t.Error("mxd_a should be reached from mxd_dispa (designated .a)")
+	}
+	if !hasCaller(t, "mxd_b", "mxd_dispb") {
+		t.Error("mxd_b should be reached from mxd_dispb (positional after designated -> field b)")
+	}
+}
+
+// TestMultilineComment: multi-line /* */ and // comments containing commas/braces
+// must not corrupt the .scan registration.
+func TestMultilineComment(t *testing.T) {
+	if !hasCaller(t, "ml_scan", "ml_dispatch") {
+		t.Error("ml_scan should be reached from ml_dispatch despite multi-line + comma-bearing comments")
+	}
+}
+
+// TestCastAndMacroHandler: handler wrapped in a cast (scan_fn)cm_scan or a
+// one-arg macro WRAP(cm_init) should still resolve to the real function.
+func TestCastAndMacroHandler(t *testing.T) {
+	if !hasCaller(t, "cm_scan", "cm_dispatch_scan") {
+		t.Error("cm_scan should be reached from cm_dispatch_scan via cast (scan_fn)cm_scan")
+	}
+	if !hasCaller(t, "cm_init", "cm_dispatch_init") {
+		t.Error("cm_init should be reached from cm_dispatch_init via macro WRAP(cm_init)")
+	}
+}
+
 // TestBuildCachedAndInvalidate is the regression test for bug #3 (fnptr.build
 // rescanned the whole repo on every query). build must return the same cached
 // *index for the same root, and Invalidate must force a fresh build.

@@ -4,6 +4,15 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Improved
+- **fn-pointer heuristic covers more real registration styles** — `callers`/`callees`/`explore`
+  now resolve dispatch for: **typedef-typed tables** (`cmd_t cmds[] = {...}` with no `struct`
+  keyword, incl. anonymous `typedef struct {...} cmd_t;`), **nested-brace table rows**
+  (`{ "x", { handler } }`), **designated + positional mixes** (`{ .a = f, g }` puts `g` in field b),
+  and **cast/macro-wrapped handlers** (`(fn_t)h`, `WRAP(h)`). Parsing is now comment/multi-line
+  aware (block-level comment stripping before split). Previously these were silently under-reported.
+  No regression on existing cases (real-function gate + (struct,field) keying preserved). New fixtures
+  + tests in `internal/fnptr`.
 
 ## [0.6.2] — 2026-06-30
 ### Added
