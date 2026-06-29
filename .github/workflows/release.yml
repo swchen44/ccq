@@ -25,3 +25,28 @@ jobs:
             ccq ${{ github.ref_name }} — clangd-powered C/C++ code intelligence CLI.
             Download the archive for your platform, extract, and run `./install.sh` (or `install.ps1`).
             Requires `clangd` on PATH (or pass `--clangd <path>`).
+
+  npm-publish:
+    runs-on: ubuntu-latest
+    needs: release
+    environment: NPM_TOKEN        # the GitHub Environment that holds the NPM_TOKEN secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.23' }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'   # writes an .npmrc that auths via NODE_AUTH_TOKEN
+      - name: Build binaries + npm packages
+        run: |
+          ./build-release.sh "${GITHUB_REF_NAME}"
+          bash npm/build-npm.sh "${GITHUB_REF_NAME#v}"   # strip leading v for semver
+      - name: Publish to npm (platform packages first, launcher last)
+        run: |
+          cd npm/dist
+          for p in ccq-darwin-x64 ccq-darwin-arm64 ccq-linux-x64 ccq-linux-arm64 ccq-win32-x64 ccq; do
+            ( cd "$p" && npm publish --access public ) || echo "skip $p (already published?)"
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}      # must be an npm Automation token (bypasses 2FA)
