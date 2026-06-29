@@ -80,7 +80,7 @@ FLAGS:
   --config <p>  settings file (default: ./ccq.json or ~/.config/ccq/ccq.json) — allow/deny index filter
 `
 
-const version = "ccq 0.6.0"
+const version = "ccq 0.6.1"
 
 var queryCmds = map[string]bool{
 	"search": true, "def": true, "show": true, "refs": true, "usages": true,

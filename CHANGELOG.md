@@ -4,6 +4,8 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.6.1] — 2026-06-29
 ### Docs
 - **token-cost case study + ROI** — a real Claude Code A/B (same model+prompt, `ccq` on/off,
   measured from each run's token/cost JSON, N=3): **2.1–12.4× cheaper**, **1.8–7.9× fewer tokens**,
@@ -128,7 +130,8 @@ All notable changes to ccq are documented here. Format follows
   `compile_commands.json` auto-detect (CMake/Meson/bear), agent SKILL.md.
   Single static Go binary, zero dependencies, cross-platform.
 
-[Unreleased]: https://github.com/swchen44/ccq/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/swchen44/ccq/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/swchen44/ccq/releases/tag/v0.6.1
 [0.6.0]: https://github.com/swchen44/ccq/releases/tag/v0.6.0
 [0.5.0]: https://github.com/swchen44/ccq/releases/tag/v0.5.0
 [0.4.0]: https://github.com/swchen44/ccq/releases/tag/v0.4.0

@@ -323,7 +323,8 @@ unit test for new logic (and an integration test if it touches the clangd path).
 
 | Version | Date | Highlights |
 |---------|------|-----------|
-| [**0.6.0**](https://github.com/swchen44/ccq/releases/tag/v0.6.0) | 2026-06-29 | `ccq mcp`; `--compdb` (multi-target); `ccq.json` allow/deny index filter; `wait-index`; `cache`; `doctor` |
+| [**0.6.1**](https://github.com/swchen44/ccq/releases/tag/v0.6.1) | 2026-06-29 | docs: measured ROI case study (token/cost/completion/predictability A/B); requirement & design sync |
+| [0.6.0](https://github.com/swchen44/ccq/releases/tag/v0.6.0) | 2026-06-29 | `ccq mcp`; `--compdb` (multi-target); `ccq.json` allow/deny index filter; `wait-index`; `cache`; `doctor` |
 | [0.5.0](https://github.com/swchen44/ccq/releases/tag/v0.5.0) | 2026-06-28 | `--incremental` lazy indexing (open only changed files; ~2.4× faster restart, opt-in) |
 | [0.4.0](https://github.com/swchen44/ccq/releases/tag/v0.4.0) | 2026-06-28 | fn-pointer override table, `replace-body`/`insert`, callees body-scan fix, git-diff warm restart |
 | [0.3.0](https://github.com/swchen44/ccq/releases/tag/v0.3.0) (first public release) | 2026-06-27 | fn-pointer upgrade (struct-keyed, positional, field←field), no-build mode, macro search, graph export |
