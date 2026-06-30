@@ -151,8 +151,9 @@ func TestAdvRegToFnPtrVar(t *testing.T) {
 // B4b: documents the accepted false negative from B4.
 func TestAdvRegToFnPtrVarIndirect(t *testing.T) {
 	if !hasCalleeAdv(t, "bfv_d", "bfv_target") {
-		t.Skip("KNOWN LIMITATION (false negative, accepted): `.fvop = bfv_gvar` registers a fn-pointer " +
-			"variable; ccq does not follow the variable to bfv_target, so the real target is missed")
+		t.Skip("BY DESIGN / deferred (accepted false negative): `.fvop = bfv_gvar` registers a fn-pointer " +
+			"variable; following the variable to bfv_target is beyond the text heuristic's scope, so the " +
+			"real target is missed")
 	}
 }
 
@@ -193,9 +194,9 @@ func TestAdvPropagationCycle(t *testing.T) {
 // LIMITATION (intentional real-function gate) — documented false negative.
 func TestAdvExternGate(t *testing.T) {
 	if !hasCaller(t, "bxt_ext", "bxt_d") {
-		t.Skip("KNOWN LIMITATION (intentional false negative): `extern int bxt_ext(int);` has no definition " +
-			"in the project, so the real-function gate (addReg) drops the registration. By design, but it " +
-			"misses genuine externs defined in another translation unit")
+		t.Skip("BY DESIGN / deferred (intentional false negative): `extern int bxt_ext(int);` has no definition " +
+			"in the project, so the real-function gate (addReg) drops the registration. Relaxing it would make " +
+			"any extern name a false positive; the cost is missing genuine externs defined in another translation unit")
 	}
 }
 
@@ -233,8 +234,9 @@ func TestAdvFuncNameCollision(t *testing.T) {
 // (false negative). Importantly, no phantom caller is fabricated either.
 func TestAdvMacroHiddenDispatch(t *testing.T) {
 	if !hasCaller(t, "cmd2_h", "cmd2_user") {
-		t.Skip("KNOWN LIMITATION (false negative): the dispatch lives in `#define CALL(p) p->cmfire()`; the call " +
-			"site `CALL(p)` is opaque to the line scanner, so cmd2_user is not linked to cmd2_h")
+		t.Skip("BY DESIGN / deferred (false negative): the dispatch lives in `#define CALL(p) p->cmfire()`; " +
+			"the call site `CALL(p)` needs preprocessor expansion (clangd's domain), so cmd2_user is not " +
+			"linked to cmd2_h by the text scanner")
 	}
 }
 
