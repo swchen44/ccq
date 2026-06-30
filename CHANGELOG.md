@@ -4,6 +4,8 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.6.4] — 2026-07-01
 ### Improved
 - **fn-pointer heuristic resolves more dispatch shapes** — adversarial fixtures uncovered seven
   false negatives, now fixed: **`union` fn-ptr fields**, **nested-struct init** (`.outer = { .inner = h }`),
@@ -176,7 +178,8 @@ All notable changes to ccq are documented here. Format follows
   `compile_commands.json` auto-detect (CMake/Meson/bear), agent SKILL.md.
   Single static Go binary, zero dependencies, cross-platform.
 
-[Unreleased]: https://github.com/swchen44/ccq/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/swchen44/ccq/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/swchen44/ccq/releases/tag/v0.6.4
 [0.6.3]: https://github.com/swchen44/ccq/releases/tag/v0.6.3
 [0.6.2]: https://github.com/swchen44/ccq/releases/tag/v0.6.2
 [0.6.1]: https://github.com/swchen44/ccq/releases/tag/v0.6.1

@@ -169,7 +169,7 @@ ccq 的设计来自一场 C 代码智能工具的对打 benchmark（完整 harne
 
 ccq 刻意只是 clangd 之上的薄层；它继承 clangd 的强项，也有几个诚实的限制。
 
-- **函数指针启发式（`fnptr`）** — 纯文本、刻意*过度近似*：它把一个 dispatcher 连到该 `(struct, 字段)` 注册过的**所有** handler（是候选集，不是运行期单一目标）。它**不自动解析**：当作参数传递后在他处被调用的 callback（`eloop_register_timeout(cb, …)` → 之后 `e->cb()`）、间接接收者 `(*p)->fn()`、数组索引分派 `arr[i]->fn()`、返回值分派 `get_fn()()`、或存在普通（非 struct）变量里的函数指针。positional table 与多行注册为尽力而为。**缓解：** 可在 `ccq.fnptr.json` 对照表手动声明这些关联。
+- **函数指针启发式（`fnptr`）** — 纯文本、刻意*过度近似*：它把一个 dispatcher 连到该 `(struct, 字段)` 注册过的**所有** handler（是候选集，不是运行期单一目标）。它**不自动解析**：当作参数传递后在他处被调用的 callback（`eloop_register_timeout(cb, …)` → 之后 `e->cb()`）、数组索引分派 `arr[i]->fn()`、返回值分派 `get_fn()()`、藏在 function-like macro 里的分派、存在普通（非 struct）变量里的函数指针、或定义在其他 translation unit 的 extern handler。positional table 与多行注册为尽力而为。**缓解：** 可在 `ccq.fnptr.json` 对照表手动声明这些关联。
 - **callees** — clangd 的 `outgoingCalls` 不可靠，所以 `callees` 会 union 函数体扫描（调用点对照符号索引验证）+ fnptr 分派目标。body-scan 仍可能漏掉藏在宏后的调用。
 - **callback / 事件分派** — 「先注册、之后调用」流程（eloop/timer/signal）不被解析 —— 这是所有静态工具（含 cscope、clangd）的共同盲区。
 - **无 build 模式精度** — `compile_flags.txt` 让你不用 build 也能跨文件，但用猜的 include 且无 `-D`：`#ifdef` 分支会过度涵盖、依赖宏的代码可能错。要 config 精准请用真的 `compile_commands.json`。
@@ -254,7 +254,8 @@ make fmt               # gofmt -w .
 
 | 版本 | 日期 | 重点 |
 |------|------|------|
-| [**0.6.3**](https://github.com/swchen44/ccq/releases/tag/v0.6.3) | 2026-06-30 | fnptr 涵盖更多注册写法(typedef 表、嵌套、混用、cast/macro);release 加测试关卡 |
+| [**0.6.4**](https://github.com/swchen44/ccq/releases/tag/v0.6.4) | 2026-07-01 | fnptr 解析更多分派写法(union 字段、嵌套 struct 初始化、数组索引 designator、pointer typedef receiver、deref/cast/跨行分派);无误报回归 |
+| [0.6.3](https://github.com/swchen44/ccq/releases/tag/v0.6.3) | 2026-06-30 | fnptr 涵盖更多注册写法(typedef 表、嵌套、混用、cast/macro);release 加测试关卡 |
 | [0.6.2](https://github.com/swchen44/ccq/releases/tag/v0.6.2) | 2026-06-30 | npm 安装(`npm i -g @swchen44/ccq`);skill 移到 `skills/ccq/`;明确 C/C++ only 语言范围 |
 | [0.6.1](https://github.com/swchen44/ccq/releases/tag/v0.6.1) | 2026-06-29 | 文档:实测 ROI case study(token/成本/完成度/可预测性 A/B);requirement 与 design 同步 |
 | [0.6.0](https://github.com/swchen44/ccq/releases/tag/v0.6.0) | 2026-06-29 | `ccq mcp`;`--compdb`(多 target);`ccq.json` allow/deny 索引过滤;`wait-index`;`cache`;`doctor` |
