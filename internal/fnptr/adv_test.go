@@ -68,8 +68,7 @@ func TestAdvChainedDispatch(t *testing.T) {
 // reDispatch needs `ident -> field(`; the `)` from `(*pp)` breaks the match.
 func TestAdvDerefDoublePtr(t *testing.T) {
 	if !hasCaller(t, "adr_h", "adr_caller") {
-		t.Skip("KNOWN LIMITATION (false negative): `(*pp)->drgo()` — the reDispatch regex needs a bare " +
-			"identifier immediately before `->`, but `)` intervenes, so no dispatch site is detected")
+		t.Error("adr_h should reach adr_caller through the dereferenced receiver `(*pp)->drgo()`")
 	}
 }
 
@@ -77,8 +76,7 @@ func TestAdvDerefDoublePtr(t *testing.T) {
 // shape problem — `)` before `->` prevents the match.
 func TestAdvCastReceiver(t *testing.T) {
 	if !hasCaller(t, "acr_h", "acr_caller") {
-		t.Skip("KNOWN LIMITATION (false negative): cast receiver `((struct acr*)v)->crop()` is not matched " +
-			"by reDispatch (no bare identifier before `->`)")
+		t.Error("acr_h should reach acr_caller through the cast receiver `((struct acr*)v)->crop()`")
 	}
 }
 
@@ -86,8 +84,7 @@ func TestAdvCastReceiver(t *testing.T) {
 // reDispatch is applied per-line.
 func TestAdvCrossLineDispatch(t *testing.T) {
 	if !hasCaller(t, "acl_h", "acl_caller") {
-		t.Skip("KNOWN LIMITATION (false negative): a dispatch split across lines (`p->` then `clstep();`) " +
-			"is not detected — reDispatch scans one stripped line at a time")
+		t.Error("acl_h should reach acl_caller through the cross-line dispatch `p->` then `clstep();`")
 	}
 }
 

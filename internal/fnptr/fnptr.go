@@ -32,6 +32,16 @@ type Caller struct {
 
 type reg struct{ Struct, Field string }
 
+// dispatchSite is one `recv->field(` / `recv.field(` call found in a source file,
+// scanned on the whole (comment/string-neutralized) file text so it tolerates a
+// dispatch split across lines and a parenthesized receiver (`(*pp)`, `(cast)v`).
+type dispatchSite struct {
+	line  int    // 0-based line of the arrow
+	recv  string // trailing identifier of the receiver expression
+	cast  string // struct/union tag from a leading cast `(struct T*)`, if any
+	field string
+}
+
 type fieldInfo struct {
 	Name       string
 	Index      int
@@ -47,10 +57,12 @@ var (
 	reInitHdr      = regexp.MustCompile(`(?:(?:struct|union)\s+)?(\w+)\s+\w+\s*(?:\[\s*\w*\s*\])?\s*=\s*\{`) // [struct|union] TYPE name[] = {
 	reDesignated   = regexp.MustCompile(`^\.\s*(\w+)\s*=\s*(.+)$`)                                           // .field = <value>
 	reArrayIdx     = regexp.MustCompile(`^\[\s*[^\]]*\]\s*=\s*(.+)$`)                                        // [N] = <value>
+	reArrowCall    = regexp.MustCompile(`(?:->|\.)\s*(\w+)\s*\(`)                                            // ...->field( | ....field(  (\s spans newlines)
+	reCastType     = regexp.MustCompile(`^\(\s*(?:struct|union)\s+(\w+)\s*\*+\s*\)`)                         // leading cast (struct T*)
+	reTrailIdent   = regexp.MustCompile(`(\w+)\s*$`)                                                         // trailing identifier of an expr
 	reIdent        = regexp.MustCompile(`^&?\s*(\w+)\s*$`)
 	reCast         = regexp.MustCompile(`^\(\s*[\w\s\*]+\)\s*(.+)$`) // (type) expr  -> expr
 	reMacro1       = regexp.MustCompile(`^(\w+)\s*\(\s*(.+?)\s*\)$`) // MACRO(inner)
-	reDispatch     = regexp.MustCompile(`(\w+)\s*(?:->|\.)\s*(\w+)\s*\(`)
 	reFieldAssign  = regexp.MustCompile(`(\w+)\s*(?:->|\.)\s*(\w+)\s*=\s*(\w+)\s*(?:->|\.)\s*(\w+)`)
 	reFuncDefBrace = regexp.MustCompile(`\b([A-Za-z_]\w*)\s*\([^()]*\)\s*\{`)
 	reFuncDefHdr   = regexp.MustCompile(`^[A-Za-z_].*\b([A-Za-z_]\w*)\s*\([^;{]*$`)
@@ -85,33 +97,18 @@ func Callers(root, handler string) []Caller {
 	added := 0
 	for _, f := range idx.files {
 		lines := idx.lines[f]
-		for i, ln := range lines {
-			ln = stripCodeLine(ln)
-			for _, m := range reDispatch.FindAllStringSubmatch(ln, -1) {
-				recv, field := m[1], m[2]
-				owners := idx.fieldToStructs[field]
-				if len(owners) == 0 {
-					continue
-				}
-				st := idx.recvType(lines, i, recv)
-				if st == "" || !contains(owners, st) {
-					if len(owners) == 1 {
-						st = owners[0]
-					} else {
-						continue
-					}
-				}
-				if !keySet[reg{st, field}] {
-					continue
-				}
-				fn := enclosingFunc(lines, i)
-				key := fn + "|" + st + "." + field
-				if fn != "" && fn != handler && !seen[key] {
-					seen[key] = true
-					out = append(out, Caller{Func: fn, File: f, Line: i + 1, Field: st + "." + field})
-					if added++; added >= fanoutCap {
-						return append(out, manual...)
-					}
+		for _, site := range idx.dispatchSites(f) {
+			st := idx.resolveDispatch(lines, site)
+			if st == "" || !keySet[reg{st, site.field}] {
+				continue
+			}
+			fn := enclosingFunc(lines, site.line)
+			key := fn + "|" + st + "." + site.field
+			if fn != "" && fn != handler && !seen[key] {
+				seen[key] = true
+				out = append(out, Caller{Func: fn, File: f, Line: site.line + 1, Field: st + "." + site.field})
+				if added++; added >= fanoutCap {
+					return append(out, manual...)
 				}
 			}
 		}
@@ -144,28 +141,16 @@ func Callees(root, fn string) []string {
 	// dispatch sites whose enclosing function is fn
 	for _, f := range idx.files {
 		lines := idx.lines[f]
-		for i, ln := range lines {
-			s := stripCodeLine(ln)
-			if !reDispatch.MatchString(s) || enclosingFunc(lines, i) != fn {
+		for _, site := range idx.dispatchSites(f) {
+			if enclosingFunc(lines, site.line) != fn {
 				continue
 			}
-			for _, m := range reDispatch.FindAllStringSubmatch(s, -1) {
-				recv, field := m[1], m[2]
-				owners := idx.fieldToStructs[field]
-				if len(owners) == 0 {
-					continue
-				}
-				st := idx.recvType(lines, i, recv)
-				if st == "" || !contains(owners, st) {
-					if len(owners) == 1 {
-						st = owners[0]
-					} else {
-						continue
-					}
-				}
-				for _, h := range idx.registrations[reg{st, field}] {
-					add(h)
-				}
+			st := idx.resolveDispatch(lines, site)
+			if st == "" {
+				continue
+			}
+			for _, h := range idx.registrations[reg{st, site.field}] {
+				add(h)
 			}
 		}
 	}
@@ -523,6 +508,107 @@ func (ix *index) scanPropagations() []prop {
 	}
 	return out
 }
+
+// dispatchSites scans the whole comment/string-neutralized text of file f for
+// `recv->field(` / `recv.field(` calls, tolerating cross-line splits (the `\s`
+// between arrow and field spans newlines) and parenthesized receivers.
+func (ix *index) dispatchSites(f string) []dispatchSite {
+	lines := ix.lines[f]
+	stripped := make([]string, len(lines))
+	for i, ln := range lines {
+		stripped[i] = stripCodeLine(ln)
+	}
+	joined := strings.Join(stripped, "\n")
+	var sites []dispatchSite
+	for _, loc := range reArrowCall.FindAllStringSubmatchIndex(joined, -1) {
+		recv, cast := parseReceiver(joined, loc[0])
+		if recv == "" {
+			continue
+		}
+		sites = append(sites, dispatchSite{
+			line:  strings.Count(joined[:loc[0]], "\n"),
+			recv:  recv,
+			cast:  cast,
+			field: joined[loc[2]:loc[3]],
+		})
+	}
+	return sites
+}
+
+// parseReceiver reads the receiver expression ending just before the arrow at
+// arrowAt, returning its trailing identifier (recv). A bare identifier is read
+// directly; a parenthesized receiver is delegated to parseInner.
+func parseReceiver(s string, arrowAt int) (recv, cast string) {
+	j := arrowAt
+	for j > 0 && isSpaceByte(s[j-1]) {
+		j--
+	}
+	if j == 0 {
+		return "", ""
+	}
+	if s[j-1] == ')' {
+		depth, k := 0, j-1
+		for ; k >= 0; k-- {
+			switch s[k] {
+			case ')':
+				depth++
+			case '(':
+				depth--
+			}
+			if depth == 0 {
+				break
+			}
+		}
+		if k < 0 {
+			return "", ""
+		}
+		return parseInner(s[k+1 : j-1])
+	}
+	e := j
+	for j > 0 && isWordByte(s[j-1]) {
+		j--
+	}
+	return s[j:e], ""
+}
+
+// resolveDispatch picks the owning struct for a dispatch site, conservatively:
+// a cast tag (if it owns the field) wins, then a resolved receiver type, then a
+// sole owner; an ambiguous unresolved receiver is dropped (prefer a false
+// negative over a false positive).
+func (ix *index) resolveDispatch(lines []string, site dispatchSite) string {
+	owners := ix.fieldToStructs[site.field]
+	if len(owners) == 0 {
+		return ""
+	}
+	if site.cast != "" && contains(owners, site.cast) {
+		return site.cast
+	}
+	if rt := ix.recvType(lines, site.line, site.recv); rt != "" && contains(owners, rt) {
+		return rt
+	}
+	if len(owners) == 1 {
+		return owners[0]
+	}
+	return ""
+}
+
+// parseInner reads a parenthesized receiver expression's interior, peeling an
+// optional leading cast `(struct T*)` (recorded as cast) and any leading
+// deref/address-of, then returning its trailing identifier as recv.
+func parseInner(inner string) (recv, cast string) {
+	inner = strings.TrimSpace(inner)
+	if m := reCastType.FindStringSubmatch(inner); m != nil {
+		cast = m[1]
+		inner = strings.TrimSpace(inner[len(m[0]):])
+	}
+	inner = strings.TrimLeft(inner, "*& \t")
+	if m := reTrailIdent.FindStringSubmatch(inner); m != nil {
+		recv = m[1]
+	}
+	return recv, cast
+}
+
+func isSpaceByte(b byte) bool { return b == ' ' || b == '\t' || b == '\n' || b == '\r' }
 
 // recvType infers the struct type of recv from the enclosing function's
 // params/locals, returning only structs known to have fn-pointer fields.
