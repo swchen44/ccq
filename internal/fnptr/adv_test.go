@@ -183,8 +183,7 @@ func TestAdvArrayIndexDesignator(t *testing.T) {
 // matches `struct ... {`, so unions are never scanned.
 func TestAdvUnionFnPtr(t *testing.T) {
 	if !hasCaller(t, "buni_h", "buni_d") {
-		t.Skip("KNOWN LIMITATION (false negative): `union buni { int (*unh)(int); }` is not scanned — " +
-			"reStructAny matches only the `struct` keyword, so union fn-pointer fields are invisible")
+		t.Error("buni_h should reach buni_d through the union fn-pointer field unh")
 	}
 }
 

@@ -40,10 +40,10 @@ type fieldInfo struct {
 
 var (
 	reTypedefFn    = regexp.MustCompile(`typedef\s+[\w\s\*]+\(\s*\*\s*(\w+)\s*\)\s*\(`)
-	reStructAny    = regexp.MustCompile(`(typedef\s+)?struct\s+(\w*)\s*\{`)                        // [typedef] struct [TAG] {
-	reFieldFnPtr   = regexp.MustCompile(`\(\s*\*\s*(\w+)\s*\)\s*\(`)                               // RET (*name)(...)
-	reInitHdr      = regexp.MustCompile(`(?:struct\s+)?(\w+)\s+\w+\s*(?:\[\s*\w*\s*\])?\s*=\s*\{`) // [struct] TYPE name[] = {
-	reDesignated   = regexp.MustCompile(`^\.\s*(\w+)\s*=\s*(.+)$`)                                 // .field = <value>
+	reStructAny    = regexp.MustCompile(`(typedef\s+)?(?:struct|union)\s+(\w*)\s*\{`)                        // [typedef] struct|union [TAG] {
+	reFieldFnPtr   = regexp.MustCompile(`\(\s*\*\s*(\w+)\s*\)\s*\(`)                                         // RET (*name)(...)
+	reInitHdr      = regexp.MustCompile(`(?:(?:struct|union)\s+)?(\w+)\s+\w+\s*(?:\[\s*\w*\s*\])?\s*=\s*\{`) // [struct|union] TYPE name[] = {
+	reDesignated   = regexp.MustCompile(`^\.\s*(\w+)\s*=\s*(.+)$`)                                           // .field = <value>
 	reIdent        = regexp.MustCompile(`^&?\s*(\w+)\s*$`)
 	reCast         = regexp.MustCompile(`^\(\s*[\w\s\*]+\)\s*(.+)$`) // (type) expr  -> expr
 	reMacro1       = regexp.MustCompile(`^(\w+)\s*\(\s*(.+?)\s*\)$`) // MACRO(inner)
