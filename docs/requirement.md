@@ -77,8 +77,9 @@ afterthought. All ROI assumptions are explicit and adjustable in the case study.
 
 - **clangd is an external runtime dependency** (the engine). ccq ships zero Go deps but
   needs a `clangd` binary on PATH (or `--clangd <path>`, or bundled via release).
-- Full accuracy needs a compile database; without a build, no-build mode trades accuracy
-  (`#ifdef` over-inclusion, missing `-D`) for breadth.
+- Full accuracy needs a compile database; without a build, no-build mode trades accuracy for breadth:
+  guessed `-I` over-inclusion, and missing `-D` makes clangd treat disabled-`#ifdef` code as inactive
+  (not found) — a pure-text definition index backs `def`/`search` to recover those symbols.
 
 ## 6. Out of scope (by design)
 

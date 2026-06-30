@@ -113,7 +113,8 @@ caveats in the [case study](docs/case-studies/token-cost/README.md).
   }
   ```
   `registrations` augment a struct.field's handlers; `links` add direct `dispatcher → handler` edges. `ccq fnptr` validates the table.
-- **No-build mode** — when there's no `compile_commands.json` and no build system, `ccq init` writes a `compile_flags.txt` (auto-discovered `-I` include dirs). clangd then resolves **cross-file** (with ccq's file priming) **without a build** — cbm-style breadth, at lower accuracy (`#ifdef` over-included, no `-D`). Accuracy ladder: compile_commands.json > compile_flags.txt > same-file.
+- **No-build mode** — when there's no `compile_commands.json` and no build system, `ccq init` writes a `compile_flags.txt` (auto-discovered `-I` include dirs). clangd then resolves **cross-file** (with ccq's file priming) **without a build** — cbm-style breadth, at lower accuracy. The over-approximation is the **guessed `-I` set** (every dir with a header); the *under*-approximation is `#ifdef`: with **no `-D`**, clangd evaluates conditionals against defaults, so code under a **disabled** config is **inactive → not found** (not "over-included"). ccq's text paths are `#ifdef`-blind and cover that gap: the fn-pointer heuristic still sees dispatch in disabled branches, and `ccq def`/`search` fall back to a pure-text [definition index](#differentiators) (clearly labelled) to locate symbols clangd dropped. Accuracy ladder: compile_commands.json > compile_flags.txt > same-file.
+- **`#ifdef`-blind definition index (no-build fallback)** — a pure-text, preprocessor-blind index of where functions/structs/unions/enums/typedefs/macros are **defined**, scanned across all files without evaluating `#ifdef`. `ccq def`/`search` consult it **only when clangd finds nothing**, so a symbol hidden behind a **disabled** config (which clangd drops in no-build mode) is still locatable — clearly labelled as approximate, never mixed into the precise clangd path.
 - **Macros** — clangd indexes `#define`s; they appear in `ccq search` (kind `macro`) and `ccq macro` expands them.
 
 ## Install
@@ -225,8 +226,11 @@ ccq is deliberately a thin layer over clangd; it inherits clangd's strengths and
 - **Callback / event dispatch** — "register now, call later" flows (eloop/timer/signal) aren't
   resolved — a blind spot shared by all static tools (cscope, clangd included).
 - **No-build mode accuracy** — `compile_flags.txt` gives cross-file reach without a build, but with
-  guessed includes and no `-D`: `#ifdef` branches are over-included and macro-dependent code may be
-  wrong. Use a real `compile_commands.json` for config-accurate results.
+  guessed includes and no `-D`: clangd evaluates `#ifdef` against defaults, so code under a **disabled**
+  config goes **inactive and is not found** (clangd-side omission), and macro-dependent code may be wrong.
+  Mitigation: `ccq def`/`search` fall back to a pure-text, `#ifdef`-blind [definition index](#differentiators)
+  that still locates such symbols (labelled as approximate). Use a real `compile_commands.json` for
+  config-accurate results.
 - **Cold start & scale** — the first query spawns the daemon and indexes the repo (~30s on redis);
   clangd's index uses RAM proportional to repo size. Warm queries are sub-second. With a persisted
   index, `--incremental` opens only git-changed files (~2.4× faster restart); it's opt-in while it

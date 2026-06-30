@@ -136,7 +136,7 @@ JSON-RPC framing is hand-rolled in `internal/mcp`, consistent with the no-third-
 | Config | How clangd behaves | Accuracy |
 |--------|-------------------|----------|
 | `compile_commands.json` | full background index, real flags + `-D` | highest (correct `#ifdef`, includes) |
-| `compile_flags.txt` (no-build) | flat flags, no background index; ccq primes via OpenAll | cross-file works; `#ifdef` over-included, no `-D` |
+| `compile_flags.txt` (no-build) | flat flags, no background index; ccq primes via OpenAll | cross-file works; guessed `-I` over-included; no `-D` → disabled-`#ifdef` code inactive/not-found (text def-index fallback recovers it) |
 | none | `clang foo.c` guess | same-file only |
 
 ### `--compdb` — multiple / renamed compile databases (multi-target builds)

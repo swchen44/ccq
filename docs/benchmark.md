@@ -87,8 +87,9 @@ call graph).
 - **Warm daemon** — index once; later queries are sub-second (you don't re-pay the index).
 - **`--incremental`** (v0.5, opt-in) — on a warm restart with a persisted index, open only
   git-changed files: redis cold start **25s → 10s (~2.4×)**, identical results.
-- **No-build mode** — `compile_flags.txt` skips the build at the cost of accuracy (`#ifdef`
-  over-included, no `-D`).
+- **No-build mode** — `compile_flags.txt` skips the build at the cost of accuracy: guessed `-I`
+  over-included; no `-D`, so clangd treats disabled-`#ifdef` code as inactive (not found). The
+  pure-text definition index backs `def`/`search` to recover those symbols.
 
 ### 4.4 Warm / repeated query latency
 | | cbm | CodeGraph | Serena | **ccq** |

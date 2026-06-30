@@ -4,6 +4,21 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Added
+- **`#ifdef`-blind definition index (no-build fallback)** — a new pure-text, preprocessor-blind
+  index (`internal/cindex`) of where functions/structs/unions/enums/typedefs/macros are *defined*,
+  scanned across all files without evaluating `#ifdef`. `ccq def`/`search` consult it **only when
+  clangd returns nothing**, so a symbol hidden behind a **disabled** config — which clangd drops in
+  no-build mode (no `-D`) — is still locatable. Results are clearly labelled as approximate
+  (`text index (no-build, #ifdef-blind; may be inactive in your build config)`; JSON
+  `source:"text-index"`) and never mix into the precise clangd path. Shared scan primitives moved to
+  `internal/csrc`.
+### Fixed
+- **Docs: corrected the no-build `#ifdef` description.** The READMEs/design/benchmark/requirement docs
+  said `#ifdef` was "over-included" in no-build mode — that is backwards. With no `-D`, clangd treats
+  a **disabled** config's branch as **inactive → not found** (an omission, not over-inclusion); the
+  genuine over-approximation is the guessed `-I` include set. Updated all three READMEs + docs and
+  pointed at the new text definition-index fallback.
 
 ## [0.6.4] — 2026-07-01
 ### Improved
