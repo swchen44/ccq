@@ -13,13 +13,11 @@
 package fnptr
 
 import (
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 
-	"github.com/swchen44/ccq/internal/config"
+	"github.com/swchen44/ccq/internal/csrc"
 )
 
 // Caller is a synthesized heuristic caller of a target handler.
@@ -207,9 +205,9 @@ func buildFresh(root string) *index {
 		funcDefs:       map[string]bool{},
 		manualLinks:    map[string][]Caller{},
 	}
-	ix.files = cFiles(root)
+	ix.files = csrc.Files(root)
 	for _, f := range ix.files {
-		ix.lines[f] = readLines(f)
+		ix.lines[f] = csrc.ReadLines(f)
 	}
 	// Pass A: fn-pointer typedefs + function defs (real-function gate)
 	for _, f := range ix.files {
@@ -301,7 +299,7 @@ func (ix *index) mergeTable(t *Table) {
 }
 
 func (ix *index) scanStructs(f string) {
-	joined := stripComments(strings.Join(ix.lines[f], "\n"))
+	joined := csrc.StripComments(strings.Join(ix.lines[f], "\n"))
 	for _, loc := range reStructAny.FindAllStringSubmatchIndex(joined, -1) {
 		isTypedef := loc[2] >= 0 // group 1 (typedef) present
 		tag := joined[loc[4]:loc[5]]
@@ -388,7 +386,7 @@ func (ix *index) addReg(st, field, fn string) {
 }
 
 func (ix *index) scanRegistrations(f string) {
-	joined := stripComments(strings.Join(ix.lines[f], "\n"))
+	joined := csrc.StripComments(strings.Join(ix.lines[f], "\n"))
 	for _, loc := range reInitHdr.FindAllStringSubmatchIndex(joined, -1) {
 		st := joined[loc[2]:loc[3]]
 		layout := ix.structLayout[st]
@@ -516,7 +514,7 @@ func (ix *index) dispatchSites(f string) []dispatchSite {
 	lines := ix.lines[f]
 	stripped := make([]string, len(lines))
 	for i, ln := range lines {
-		stripped[i] = stripCodeLine(ln)
+		stripped[i] = csrc.StripCodeLine(ln)
 	}
 	joined := strings.Join(stripped, "\n")
 	var sites []dispatchSite
@@ -669,76 +667,6 @@ func stripComment(s string) string {
 // and char literals on a single line, so a dispatch-like token inside a string
 // (e.g. "... p->fn() ...") is never parsed as a real call site. Used by the
 // dispatch scan in Callers/Callees (where false positives must be avoided).
-func stripCodeLine(s string) string {
-	var b strings.Builder
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if c == '/' && i+1 < len(s) && s[i+1] == '/' {
-			break // line comment: drop the rest
-		}
-		if c == '/' && i+1 < len(s) && s[i+1] == '*' { // block comment (single line)
-			if j := strings.Index(s[i+2:], "*/"); j >= 0 {
-				i += j + 3
-				continue
-			}
-			break
-		}
-		if c == '"' || c == '\'' { // keep the delimiters, blank the interior
-			b.WriteByte(c)
-			i++
-			for i < len(s) {
-				if s[i] == '\\' && i+1 < len(s) {
-					i += 2
-					continue
-				}
-				if s[i] == c {
-					b.WriteByte(c)
-					break
-				}
-				i++
-			}
-			continue
-		}
-		b.WriteByte(c)
-	}
-	return b.String()
-}
-
-// stripComments removes // and (multi-line) /* */ comments from a whole block,
-// preserving newlines so line numbers stay aligned. Used before the join-based
-// struct/registration scans so comment commas/braces can't corrupt splitting.
-func stripComments(s string) string {
-	var b strings.Builder
-	for i := 0; i < len(s); {
-		if s[i] == '/' && i+1 < len(s) && s[i+1] == '*' {
-			j := strings.Index(s[i+2:], "*/")
-			seg := s[i:]
-			if j >= 0 {
-				seg = s[i : i+2+j+2]
-			}
-			for _, r := range seg { // keep the comment's newlines
-				if r == '\n' {
-					b.WriteByte('\n')
-				}
-			}
-			if j < 0 {
-				break
-			}
-			i += 2 + j + 2
-			continue
-		}
-		if s[i] == '/' && i+1 < len(s) && s[i+1] == '/' {
-			for i < len(s) && s[i] != '\n' {
-				i++
-			}
-			continue
-		}
-		b.WriteByte(s[i])
-		i++
-	}
-	return b.String()
-}
-
 // firstIdentAfter returns the first identifier at/after pos (skipping `*` and
 // spaces) — used to read the ALIAS in `typedef struct {...} ALIAS;`.
 func firstIdentAfter(src string, pos int) string {
@@ -850,35 +778,4 @@ func appendUniq(ss []string, s string) []string {
 		return ss
 	}
 	return append(ss, s)
-}
-
-func cFiles(root string) []string {
-	var out []string
-	filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
-			if info != nil && info.IsDir() {
-				b := filepath.Base(p)
-				if b == ".git" || b == "build" || b == "node_modules" || b == ".cache" {
-					return filepath.SkipDir
-				}
-			}
-			return nil
-		}
-		switch filepath.Ext(p) {
-		case ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp":
-			if config.Keep(p) {
-				out = append(out, p)
-			}
-		}
-		return nil
-	})
-	return out
-}
-
-func readLines(f string) []string {
-	b, err := os.ReadFile(f)
-	if err != nil {
-		return nil
-	}
-	return strings.Split(string(b), "\n")
 }
