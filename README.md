@@ -357,6 +357,8 @@ Full notes: [CHANGELOG.md](CHANGELOG.md). Latest binaries: [Releases](https://gi
 - [ ] More build systems (Bazel, xmake) for `ccq init`
 - [x] fn-pointer heuristic: positional-table edge cases (typedef-typed tables, nested rows,
       designated+positional mix, cast/macro-wrapped handlers) + comment/multi-line-aware parsing — *done in 0.6.3*
+- [x] fn-pointer heuristic: more dispatch shapes (union fields, nested-struct init, array-index
+      designators, pointer-typedef receivers, deref/cast/cross-line dispatch) — *done in 0.6.4*
 
 ## License
 MIT. Reuses architecture ideas validated by `troberti/clangd-query` (MIT), `mpsm/mcp-cpp`, and `2015xli/clangd-graph-rag`.
