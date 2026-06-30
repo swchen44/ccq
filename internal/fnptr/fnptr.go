@@ -33,9 +33,10 @@ type Caller struct {
 type reg struct{ Struct, Field string }
 
 type fieldInfo struct {
-	Name  string
-	Index int
-	FnPtr bool
+	Name       string
+	Index      int
+	FnPtr      bool
+	StructType string // for a value `struct/union TAG name;` field: the inner tag
 }
 
 var (
@@ -351,6 +352,9 @@ func (ix *index) parseStructFields(body string) []fieldInfo {
 				fi.Name = strings.Trim(toks[len(toks)-1], "*[]")
 				if ix.fnPtrTypedefs[toks[0]] {
 					fi.FnPtr = true
+				} else if (toks[0] == "struct" || toks[0] == "union") && len(toks) >= 3 && !strings.Contains(decl, "*") {
+					// value `struct/union TAG name;` — field holds an inner aggregate
+					fi.StructType = toks[1]
 				}
 			}
 		}
@@ -360,6 +364,17 @@ func (ix *index) parseStructFields(body string) []fieldInfo {
 		}
 	}
 	return fields
+}
+
+// fieldStructType returns the inner struct/union tag held by a value-typed field,
+// or "" if the field is not an aggregate value field.
+func (ix *index) fieldStructType(st, field string) string {
+	for _, fi := range ix.structLayout[st] {
+		if fi.Name == field {
+			return fi.StructType
+		}
+	}
+	return ""
 }
 
 func (ix *index) fnPtrField(st, field string) bool {
@@ -425,12 +440,18 @@ func (ix *index) scanRow(st string, layout []fieldInfo, row string) {
 			continue
 		}
 		if m := reDesignated.FindStringSubmatch(item); m != nil {
-			if ix.fnPtrField(st, m[1]) {
-				if h := handlerIdent(m[2]); h != "" {
-					ix.addReg(st, m[1], h)
+			field, val := m[1], strings.TrimSpace(m[2])
+			if ix.fnPtrField(st, field) {
+				if h := handlerIdent(val); h != "" {
+					ix.addReg(st, field, h)
+				}
+			} else if inner := ix.fieldStructType(st, field); inner != "" && strings.HasPrefix(val, "{") {
+				// nested struct init `.f = { ... }`: recurse with the inner layout
+				if il := ix.structLayout[inner]; il != nil {
+					ix.scanRow(inner, il, strings.Trim(val, "{} "))
 				}
 			}
-			pos = ix.fieldIndex(st, m[1]) + 1 // positional continues after this field
+			pos = ix.fieldIndex(st, field) + 1 // positional continues after this field
 			continue
 		}
 		ix.placePositional(st, layout, pos, item)

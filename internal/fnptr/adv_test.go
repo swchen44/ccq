@@ -165,8 +165,7 @@ func TestAdvRegToFnPtrVarIndirect(t *testing.T) {
 // when the outer field isn't itself a fn-pointer, so the inner registration is lost.
 func TestAdvNestedStructInit(t *testing.T) {
 	if !hasCaller(t, "bns_h", "bns_d") {
-		t.Skip("KNOWN LIMITATION (false negative): nested struct init `.nsin = { .nsfn = bns_h }` — " +
-			"scanRow treats `.nsin` as a (non-fn-ptr) designated field and never recurses into the inner brace")
+		t.Error("bns_h should reach bns_d through nested struct init `.nsin = { .nsfn = bns_h }`")
 	}
 }
 
