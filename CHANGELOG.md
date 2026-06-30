@@ -4,6 +4,8 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.6.3] — 2026-06-30
 ### Improved
 - **fn-pointer heuristic covers more real registration styles** — `callers`/`callees`/`explore`
   now resolve dispatch for: **typedef-typed tables** (`cmd_t cmds[] = {...}` with no `struct`
@@ -13,6 +15,10 @@ All notable changes to ccq are documented here. Format follows
   aware (block-level comment stripping before split). Previously these were silently under-reported.
   No regression on existing cases (real-function gate + (struct,field) keying preserved). New fixtures
   + tests in `internal/fnptr`.
+### CI
+- **Releases are now test-gated** — the `release` workflow runs the full suite (gofmt, vet,
+  golangci-lint, unit + integration tests) before building/publishing, so a tag never ships if tests
+  fail. (Pushes/PRs were already tested by `ci.yml`; tag pushes weren't.)
 
 ## [0.6.2] — 2026-06-30
 ### Added
@@ -159,7 +165,8 @@ All notable changes to ccq are documented here. Format follows
   `compile_commands.json` auto-detect (CMake/Meson/bear), agent SKILL.md.
   Single static Go binary, zero dependencies, cross-platform.
 
-[Unreleased]: https://github.com/swchen44/ccq/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/swchen44/ccq/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/swchen44/ccq/releases/tag/v0.6.3
 [0.6.2]: https://github.com/swchen44/ccq/releases/tag/v0.6.2
 [0.6.1]: https://github.com/swchen44/ccq/releases/tag/v0.6.1
 [0.6.0]: https://github.com/swchen44/ccq/releases/tag/v0.6.0

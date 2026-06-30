@@ -254,7 +254,8 @@ make fmt               # gofmt -w .
 
 | 版本 | 日期 | 重點 |
 |------|------|------|
-| [**0.6.2**](https://github.com/swchen44/ccq/releases/tag/v0.6.2) | 2026-06-30 | npm 安裝(`npm i -g @swchen44/ccq`);skill 移到 `skills/ccq/`;明確 C/C++ only 語言範圍 |
+| [**0.6.3**](https://github.com/swchen44/ccq/releases/tag/v0.6.3) | 2026-06-30 | fnptr 涵蓋更多註冊寫法(typedef 表、巢狀、混用、cast/macro);release 加測試關卡 |
+| [0.6.2](https://github.com/swchen44/ccq/releases/tag/v0.6.2) | 2026-06-30 | npm 安裝(`npm i -g @swchen44/ccq`);skill 移到 `skills/ccq/`;明確 C/C++ only 語言範圍 |
 | [0.6.1](https://github.com/swchen44/ccq/releases/tag/v0.6.1) | 2026-06-29 | 文件:實測 ROI case study(token/成本/完成度/可預測性 A/B);requirement 與 design 同步 |
 | [0.6.0](https://github.com/swchen44/ccq/releases/tag/v0.6.0) | 2026-06-29 | `ccq mcp`;`--compdb`(多 target);`ccq.json` allow/deny 索引過濾;`wait-index`;`cache`;`doctor` |
 | [0.5.0](https://github.com/swchen44/ccq/releases/tag/v0.5.0) | 2026-06-28 | --incremental 懶開索引(只開變動檔;暖重啟 ~2.4× 快,opt-in) |

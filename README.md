@@ -331,7 +331,8 @@ unit test for new logic (and an integration test if it touches the clangd path).
 
 | Version | Date | Highlights |
 |---------|------|-----------|
-| [**0.6.2**](https://github.com/swchen44/ccq/releases/tag/v0.6.2) | 2026-06-30 | npm install (`npm i -g @swchen44/ccq`); skill moved to `skills/ccq/`; explicit C/C++-only language scope |
+| [**0.6.3**](https://github.com/swchen44/ccq/releases/tag/v0.6.3) | 2026-06-30 | fn-pointer heuristic covers more registration styles (typedef tables, nested rows, mixed, cast/macro); test-gated releases |
+| [0.6.2](https://github.com/swchen44/ccq/releases/tag/v0.6.2) | 2026-06-30 | npm install (`npm i -g @swchen44/ccq`); skill moved to `skills/ccq/`; explicit C/C++-only language scope |
 | [0.6.1](https://github.com/swchen44/ccq/releases/tag/v0.6.1) | 2026-06-29 | docs: measured ROI case study (token/cost/completion/predictability A/B); requirement & design sync |
 | [0.6.0](https://github.com/swchen44/ccq/releases/tag/v0.6.0) | 2026-06-29 | `ccq mcp`; `--compdb` (multi-target); `ccq.json` allow/deny index filter; `wait-index`; `cache`; `doctor` |
 | [0.5.0](https://github.com/swchen44/ccq/releases/tag/v0.5.0) | 2026-06-28 | `--incremental` lazy indexing (open only changed files; ~2.4× faster restart, opt-in) |
