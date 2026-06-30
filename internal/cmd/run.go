@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/swchen44/ccq/internal/cindex"
+	"github.com/swchen44/ccq/internal/csrc"
 	"github.com/swchen44/ccq/internal/fnptr"
 	"github.com/swchen44/ccq/internal/lsp"
 )
@@ -182,6 +184,16 @@ func (c *Ctx) Search(query string) {
 		fmt.Fprintf(c.Out, "%s\t%s:%d\t[%s]\n", s.Name, lsp.URIToPath(s.Location.URI),
 			s.Location.Range.Start.Line+1, kindName(s.Kind))
 	}
+	// When clangd finds nothing, the #ifdef-blind text index may still locate an
+	// exact-named definition hidden behind a disabled config (no-build mode).
+	if len(syms) == 0 {
+		if defs := cindex.Build(c.Root).Lookup(query); len(defs) > 0 {
+			fmt.Fprintf(c.Out, "// no clangd match; text index (no-build, #ifdef-blind) found:\n")
+			for _, d := range defs {
+				fmt.Fprintf(c.Out, "%s\t%s:%d\t[%s]\n", query, d.File, d.Line, d.Kind)
+			}
+		}
+	}
 }
 
 // Def: show the definition snippet of a symbol. Prefers the .c definition (with a
@@ -195,6 +207,11 @@ func (c *Ctx) Def(name string) {
 	// fallback for symbols not in documentSymbol (e.g. macros): resolveSymbol + definition
 	file, pos, ok := c.resolveSymbol(name)
 	if !ok {
+		// last resort: the pure-text, #ifdef-blind definition index finds symbols
+		// clangd drops in no-build mode because they sit behind a disabled #ifdef.
+		if c.textDefFallback(name) {
+			return
+		}
 		fmt.Fprintf(c.Out, "symbol not found: %s\n", name)
 		return
 	}
@@ -207,6 +224,57 @@ func (c *Ctx) Def(name string) {
 	f := lsp.URIToPath(l.URI)
 	fmt.Fprintf(c.Out, "// %s:%d\n%s\n", f, l.Range.Start.Line+1,
 		lsp.Snippet(f, l.Range.Start.Line, l.Range.End.Line))
+}
+
+// textDefFallback prints definitions found by the pure-text, #ifdef-blind
+// definition index (internal/cindex). It is consulted ONLY after clangd has
+// failed, so it never pollutes the precise path; results are clearly labelled as
+// approximate (they may be inactive in the user's actual build config). Returns
+// true if it printed at least one definition.
+func (c *Ctx) textDefFallback(name string) bool {
+	defs := cindex.Build(c.Root).Lookup(name)
+	if len(defs) == 0 {
+		return false
+	}
+	if c.JSON {
+		c.emit(struct {
+			Symbol string       `json:"symbol"`
+			Source string       `json:"source"`
+			Defs   []cindex.Def `json:"defs"`
+		}{name, "text-index", defs})
+		return true
+	}
+	fmt.Fprintf(c.Out, "// %s — text index (no-build, #ifdef-blind; may be inactive in your build config)\n", name)
+	for _, d := range defs {
+		end := textDefEndLine(d.File, d.Line)
+		fmt.Fprintf(c.Out, "// %s:%d [%s]\n%s\n", d.File, d.Line, d.Kind,
+			lsp.Snippet(d.File, d.Line-1, end-1))
+	}
+	return true
+}
+
+// textDefEndLine returns the 1-based line where a definition starting at start
+// (1-based) ends: the line that closes the first `{` at brace depth 0, capped to
+// keep the snippet small. Braces in strings/comments are ignored. A definition
+// with no brace (a macro / one-line typedef) spans just its own line.
+func textDefEndLine(file string, start int) int {
+	lines := csrc.ReadLines(file)
+	const maxLines = 80
+	depth, opened := 0, false
+	for i := start - 1; i < len(lines) && i < start-1+maxLines; i++ {
+		s := csrc.StripCodeLine(lines[i])
+		depth += strings.Count(s, "{") - strings.Count(s, "}")
+		if strings.Contains(s, "{") {
+			opened = true
+		}
+		if opened && depth <= 0 {
+			return i + 1
+		}
+	}
+	if opened {
+		return start - 1 + maxLines
+	}
+	return start
 }
 
 // Refs: all references.
