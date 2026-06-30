@@ -104,7 +104,7 @@ caveats in the [case study](docs/case-studies/token-cost/README.md).
 - `status`, `shutdown`, `version`
 
 **Differentiators**
-- **fn-pointer dispatch** — `callers`/`explore` parse ops-struct registrations and `obj->fn()` dispatch to synthesize `dispatcher → handler` edges. Keyed by **(struct type, field)** so same-named fields in different structs don't cross-bleed; handles **designated init, positional tables `{"n", fn}`, and field←field propagation** (ported from CodeGraph's synthesizer). clangd alone won't do this.
+- **fn-pointer dispatch** — `callers`/`explore` parse ops-struct registrations and `obj->fn()` dispatch to synthesize `dispatcher → handler` edges. Keyed by **(struct type, field)** so same-named fields in different structs don't cross-bleed; handles **designated init, positional tables `{"n", fn}`, field←field propagation** (ported from CodeGraph's synthesizer), plus **`union` fn-ptr fields, nested-struct init `.a = { .b = h }`, array-index designators `[N] = {…}`, pointer-typedef receivers, and dereferenced / cast / cross-line dispatch (`(*pp)->f()`, `((struct T*)v)->f()`, `p->\n f()`)**. clangd alone won't do this.
 - **fn-pointer override table** — for the blind spots the text scan can't infer (callbacks, indirect dispatch), drop a `ccq.fnptr.json` in the project root to declare ground truth, merged with the automatic scan (JSON, zero-dependency):
   ```json
   {
@@ -214,9 +214,10 @@ ccq is deliberately a thin layer over clangd; it inherits clangd's strengths and
 - **Function-pointer heuristic (`fnptr`)** — text-based and intentionally *over-approximating*:
   it links a dispatcher to **all** handlers registered to that `(struct, field)` (candidates, not
   the single runtime target). It does **not** auto-resolve: callbacks passed as arguments then invoked
-  elsewhere (`eloop_register_timeout(cb, …)` → later `e->cb()`), indirect receivers `(*p)->fn()`,
-  array-indexed dispatch `arr[i]->fn()`, return-value dispatch `get_fn()()`, or fn-pointers stored
-  in plain (non-struct) variables. Positional tables and multi-line registrations are best-effort.
+  elsewhere (`eloop_register_timeout(cb, …)` → later `e->cb()`), array-indexed dispatch `arr[i]->fn()`,
+  return-value dispatch `get_fn()()`, dispatch hidden behind function-like macros, fn-pointers stored
+  in plain (non-struct) variables, or extern handlers defined in another translation unit. Positional
+  tables and multi-line registrations are best-effort.
   **Mitigation:** declare these in a [`ccq.fnptr.json`](#differentiators) override table.
 - **Callees** — clangd's `outgoingCalls` is unreliable, so `callees` unions it with a function-body
   scan (call sites verified against the symbol index) and fn-pointer dispatch targets. Body-scan can

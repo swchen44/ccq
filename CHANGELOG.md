@@ -4,6 +4,17 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Improved
+- **fn-pointer heuristic resolves more dispatch shapes** — adversarial fixtures uncovered seven
+  false negatives, now fixed: **`union` fn-ptr fields**, **nested-struct init** (`.outer = { .inner = h }`),
+  **array-index designators** (`[N] = { … }`), **pointer-typedef receivers** (`typedef struct T *Alias;`
+  then `Alias p; p->f()`), and — via a whole-file dispatch scan replacing the old per-line one —
+  **dereferenced**, **cast**, and **cross-line** receivers (`(*pp)->f()`, `((struct T*)v)->f()`,
+  `p->`⏎`f()`). The "prefer a false negative over a false positive" guarantee is preserved: an
+  ambiguous unresolved receiver is dropped, and all false-positive gate tests stay green. Real-repo
+  recall unchanged (wpa `wpa_driver_wext_scan` 3 dispatchers, redis `lookupCommand` 13 callers).
+  Remaining gaps are by-design/deferred: extern-only handlers (real-function gate), macro-hidden
+  dispatch (needs preprocessor expansion), and fn-pointer-variable indirection.
 
 ## [0.6.3] — 2026-06-30
 ### Improved
