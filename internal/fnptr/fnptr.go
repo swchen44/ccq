@@ -83,7 +83,7 @@ func Callers(root, handler string) []Caller {
 	for _, f := range idx.files {
 		lines := idx.lines[f]
 		for i, ln := range lines {
-			ln = stripComment(ln)
+			ln = stripCodeLine(ln)
 			for _, m := range reDispatch.FindAllStringSubmatch(ln, -1) {
 				recv, field := m[1], m[2]
 				owners := idx.fieldToStructs[field]
@@ -142,7 +142,7 @@ func Callees(root, fn string) []string {
 	for _, f := range idx.files {
 		lines := idx.lines[f]
 		for i, ln := range lines {
-			s := stripComment(ln)
+			s := stripCodeLine(ln)
 			if !reDispatch.MatchString(s) || enclosingFunc(lines, i) != fn {
 				continue
 			}
@@ -539,6 +539,45 @@ func stripComment(s string) string {
 		s = s[:a] + s[a+b+2:]
 	}
 	return s
+}
+
+// stripCodeLine removes // and /* */ comments AND blanks the interior of string
+// and char literals on a single line, so a dispatch-like token inside a string
+// (e.g. "... p->fn() ...") is never parsed as a real call site. Used by the
+// dispatch scan in Callers/Callees (where false positives must be avoided).
+func stripCodeLine(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c == '/' && i+1 < len(s) && s[i+1] == '/' {
+			break // line comment: drop the rest
+		}
+		if c == '/' && i+1 < len(s) && s[i+1] == '*' { // block comment (single line)
+			if j := strings.Index(s[i+2:], "*/"); j >= 0 {
+				i += j + 3
+				continue
+			}
+			break
+		}
+		if c == '"' || c == '\'' { // keep the delimiters, blank the interior
+			b.WriteByte(c)
+			i++
+			for i < len(s) {
+				if s[i] == '\\' && i+1 < len(s) {
+					i += 2
+					continue
+				}
+				if s[i] == c {
+					b.WriteByte(c)
+					break
+				}
+				i++
+			}
+			continue
+		}
+		b.WriteByte(c)
+	}
+	return b.String()
 }
 
 // stripComments removes // and (multi-line) /* */ comments from a whole block,

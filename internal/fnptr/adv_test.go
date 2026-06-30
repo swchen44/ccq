@@ -219,8 +219,7 @@ func TestAdvStringLiteralNotDispatch(t *testing.T) {
 		t.Error("cst_real should be reached from cst_realcaller (the genuine dispatch)")
 	}
 	if hasCaller(t, "cst_real", "cst_doc") {
-		t.Skip("KNOWN LIMITATION (FALSE POSITIVE): the string literal `\"... p->cstemit() ...\"` in cst_doc is " +
-			"parsed as a dispatch site, fabricating cst_doc as a caller of cst_real. stripComment does not strip strings")
+		t.Error("cst_doc must NOT be a caller of cst_real: the p->cstemit() token is inside a string literal")
 	}
 }
 
