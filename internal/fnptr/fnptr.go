@@ -44,6 +44,7 @@ var (
 	reFieldFnPtr   = regexp.MustCompile(`\(\s*\*\s*(\w+)\s*\)\s*\(`)                                         // RET (*name)(...)
 	reInitHdr      = regexp.MustCompile(`(?:(?:struct|union)\s+)?(\w+)\s+\w+\s*(?:\[\s*\w*\s*\])?\s*=\s*\{`) // [struct|union] TYPE name[] = {
 	reDesignated   = regexp.MustCompile(`^\.\s*(\w+)\s*=\s*(.+)$`)                                           // .field = <value>
+	reArrayIdx     = regexp.MustCompile(`^\[\s*[^\]]*\]\s*=\s*(.+)$`)                                        // [N] = <value>
 	reIdent        = regexp.MustCompile(`^&?\s*(\w+)\s*$`)
 	reCast         = regexp.MustCompile(`^\(\s*[\w\s\*]+\)\s*(.+)$`) // (type) expr  -> expr
 	reMacro1       = regexp.MustCompile(`^(\w+)\s*\(\s*(.+?)\s*\)$`) // MACRO(inner)
@@ -406,6 +407,12 @@ func (ix *index) scanRow(st string, layout []fieldInfo, row string) {
 		item = strings.TrimSpace(item)
 		if item == "" {
 			continue
+		}
+		// array-index designator `[N] = <value>`: the index selects an array
+		// element, so the value (typically a `{...}` struct row) is handled by
+		// the logic below as if it were positional at the current cursor.
+		if m := reArrayIdx.FindStringSubmatch(item); m != nil {
+			item = strings.TrimSpace(m[1])
 		}
 		if strings.HasPrefix(item, "{") {
 			inner := strings.Trim(item, "{} ")

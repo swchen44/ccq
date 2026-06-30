@@ -174,8 +174,7 @@ func TestAdvNestedStructInit(t *testing.T) {
 // understand `[idx] =` array designators, so the row is never scanned.
 func TestAdvArrayIndexDesignator(t *testing.T) {
 	if !hasCaller(t, "bai_h", "bai_d") {
-		t.Skip("KNOWN LIMITATION (false negative): array-index designator `[2] = { \"x\", bai_h }` is not " +
-			"parsed by scanRow (only `.field =` designators and bare positionals are handled)")
+		t.Error("bai_h should reach bai_d through the array-index designator `[2] = { \"x\", bai_h }`")
 	}
 }
 
