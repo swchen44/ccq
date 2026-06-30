@@ -41,6 +41,7 @@ type fieldInfo struct {
 
 var (
 	reTypedefFn    = regexp.MustCompile(`typedef\s+[\w\s\*]+\(\s*\*\s*(\w+)\s*\)\s*\(`)
+	reTypedefPtr   = regexp.MustCompile(`typedef\s+(?:struct|union)\s+(\w+)\s*\*\s*(\w+)\s*;`)               // typedef struct TAG *ALIAS;
 	reStructAny    = regexp.MustCompile(`(typedef\s+)?(?:struct|union)\s+(\w*)\s*\{`)                        // [typedef] struct|union [TAG] {
 	reFieldFnPtr   = regexp.MustCompile(`\(\s*\*\s*(\w+)\s*\)\s*\(`)                                         // RET (*name)(...)
 	reInitHdr      = regexp.MustCompile(`(?:(?:struct|union)\s+)?(\w+)\s+\w+\s*(?:\[\s*\w*\s*\])?\s*=\s*\{`) // [struct|union] TYPE name[] = {
@@ -175,6 +176,7 @@ type index struct {
 	files          []string
 	lines          map[string][]string
 	fnPtrTypedefs  map[string]bool
+	ptrTypedefs    map[string]string // pointer-typedef alias -> struct/union tag
 	structLayout   map[string][]fieldInfo
 	fieldToStructs map[string][]string
 	registrations  map[reg][]string
@@ -213,6 +215,7 @@ func buildFresh(root string) *index {
 	ix := &index{
 		lines:          map[string][]string{},
 		fnPtrTypedefs:  map[string]bool{},
+		ptrTypedefs:    map[string]string{},
 		structLayout:   map[string][]fieldInfo{},
 		fieldToStructs: map[string][]string{},
 		registrations:  map[reg][]string{},
@@ -228,6 +231,9 @@ func buildFresh(root string) *index {
 		joined := strings.Join(ix.lines[f], "\n")
 		for _, m := range reTypedefFn.FindAllStringSubmatch(joined, -1) {
 			ix.fnPtrTypedefs[m[1]] = true
+		}
+		for _, m := range reTypedefPtr.FindAllStringSubmatch(joined, -1) {
+			ix.ptrTypedefs[m[2]] = m[1] // alias -> tag
 		}
 		for _, ln := range ix.lines[f] {
 			s := stripComment(ln)
@@ -524,8 +530,12 @@ func (ix *index) recvType(lines []string, atLine int, recv string) string {
 	re := regexp.MustCompile(`(?:struct\s+)?(\w+)\s*\*?\s*\b` + regexp.QuoteMeta(recv) + `\b\s*(?:[,)=;]|\[)`)
 	for i := atLine; i >= 0 && i > atLine-400; i-- {
 		for _, m := range re.FindAllStringSubmatch(lines[i], -1) {
-			if _, ok := ix.structLayout[m[1]]; ok {
-				return m[1]
+			t := m[1]
+			if tag, ok := ix.ptrTypedefs[t]; ok { // pointer typedef alias -> tag
+				t = tag
+			}
+			if _, ok := ix.structLayout[t]; ok {
+				return t
 			}
 		}
 	}

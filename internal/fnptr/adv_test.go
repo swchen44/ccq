@@ -51,8 +51,7 @@ func TestAdvPointerTypedefRecv(t *testing.T) {
 		t.Error("apto_h must NOT be reached from apt_caller (apt_caller dispatches on apt_s, not apt_o)")
 	}
 	if !hasCaller(t, "apt_h", "apt_caller") {
-		t.Skip("KNOWN LIMITATION (false negative): pointer typedef `apt_ptr` is not registered in structLayout, " +
-			"so recvType() can't resolve it; with the field owned by 2 structs the fallback bails and apt_h is lost")
+		t.Error("apt_h should reach apt_caller through the pointer typedef `apt_ptr` (= struct apt_s *)")
 	}
 }
 
