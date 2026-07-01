@@ -4,6 +4,14 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Added
+- **Opt-in tree-sitter def-index backend** — `ccq def`/`search` can use a pure-Go tree-sitter
+  backend (`--treesitter` / `CCQ_TREESITTER=1`) instead of the regex definition index, for the
+  no-build `#ifdef`-blind fallback. **Off by default** (slower; and one iterator/control-flow macro
+  makes tree-sitter cascade and drop every definition after it — see `docs/tree-sitter-exploration.md`,
+  pinned as visible KNOWN-LIMITATION tests). Release binaries link only the C grammar
+  (`-tags 'grammar_subset grammar_subset_c'`, ~7MB); `internal/tsindex` is the backend and adds ccq's
+  first third-party dependency (`odvcencio/gotreesitter`, pure Go, `CGO_ENABLED=0` cross-compiles).
 
 ## [0.6.5] — 2026-07-01
 ### Improved

@@ -135,3 +135,13 @@ int after1(void){...} int after2(void){...} int after3(void){...}
 4. **hybrid**:乾淨檔用 tree-sitter,ERROR 比例高就 fallback 回 regex。為一個 regex 已能處理的層加複雜度,邊際效益低。
 
 **結論**:治本的唯一辦法是 preprocessing(clangd 的事),而那違背初衷;治標的都把 regex 脆弱性請回來。**所以 gotreesitter 沒有乾淨地贏過 ccq 的 regex——regex 的「局部失敗」對雜亂真實 C 反而是優點**。維持 no-go。
+
+---
+
+## 實作狀態(2026-07):opt-in `--treesitter` 已上
+
+雖然結論是 no-go 為預設,使用者仍要求保留為 opt-in。已實作:
+- `--treesitter` / `CCQ_TREESITTER=1`(預設關)讓 `def`/`search` 的定義索引 fallback 改用 tree-sitter 後端(`internal/tsindex`);預設仍是 regex(`internal/cindex`)。
+- release build 加 `-tags 'grammar_subset grammar_subset_c'` 只鏈 C grammar(~7MB;不加 tag 會鏈 builtin 集肨到 ~28MB)。go.mod 首個第三方依賴 `odvcencio/gotreesitter`(純 Go,五平台 `CGO_ENABLED=0` 交叉編實測 OK)。
+- 已知弱點固化成**可見測試**:`internal/tsindex/tsindex_test.go` 的 `TestIteratorMacroCascade`(SKIP+KNOWN LIMITATION)、`cmd/ccq/treesitter_test.go` 端到端證明「迭代巨集後的符號 regex 找得到、`--treesitter` 漏」。
+- commit `f22f48c`。
