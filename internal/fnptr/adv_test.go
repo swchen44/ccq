@@ -280,6 +280,16 @@ func TestAdvFanoutCap(t *testing.T) {
 	}
 }
 
+// A: a handler whose return type is on the previous line (name at column 0)
+// must still pass the real-function gate, so its ops-struct registration and the
+// dispatch edge survive. Mirrors wpa_supplicant's wpa_driver_bsd_scan /
+// wpa_driver_ndis_scan (the 2 the fnptr benchmark missed at 3/5).
+func TestAdvSplitReturnDef(t *testing.T) {
+	if !hasCaller(t, "sd_handler", "sd_dispatch") {
+		t.Error("sd_handler should reach sd_dispatch: its definition has the return type on the previous line (name at column 0), which the real-function gate must still recognize")
+	}
+}
+
 func itoa(i int) string {
 	if i == 0 {
 		return "0"

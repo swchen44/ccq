@@ -63,7 +63,7 @@ var (
 	reMacro1       = regexp.MustCompile(`^(\w+)\s*\(\s*(.+?)\s*\)$`) // MACRO(inner)
 	reFieldAssign  = regexp.MustCompile(`(\w+)\s*(?:->|\.)\s*(\w+)\s*=\s*(\w+)\s*(?:->|\.)\s*(\w+)`)
 	reFuncDefBrace = regexp.MustCompile(`\b([A-Za-z_]\w*)\s*\([^()]*\)\s*\{`)
-	reFuncDefHdr   = regexp.MustCompile(`^[A-Za-z_].*\b([A-Za-z_]\w*)\s*\([^;{]*$`)
+	reFuncDefHdr   = regexp.MustCompile(`^(?:[A-Za-z_][\w\s\*]*\s)?([A-Za-z_]\w*)\s*\([^;{]*$`) // [ret] name(...   (name may be at col 0 when the return type is on the previous line)
 )
 
 const fanoutCap = 300
