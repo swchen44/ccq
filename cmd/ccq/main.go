@@ -78,6 +78,9 @@ FLAGS:
   --compdb a.json[,b.json…]  use these compile_commands.json file(s) (any name; merged);
                 each distinct set gets its own warm clangd (one per build config)
   --config <p>  settings file (default: ./ccq.json or ~/.config/ccq/ccq.json) — allow/deny index filter
+  --treesitter  (def/search) use the experimental tree-sitter def-index backend instead of regex
+                (or CCQ_TREESITTER=1). #ifdef-blind; off by default — slower + drops functions
+                after an iterator macro. Only the fallback when clangd finds nothing.
 `
 
 const version = "ccq 0.6.5"
@@ -192,7 +195,8 @@ func main() {
 			}
 			croot = absOr(croot)
 			cd := resolveClangd(clangdBin)
-			req := cmd.Request{Cmd: sub, Args: []string{arg}, Depth: 3}
+			req := cmd.Request{Cmd: sub, Args: []string{arg}, Depth: 3,
+				TreeSitter: os.Getenv("CCQ_TREESITTER") != ""}
 			return daemon.Query(croot, exe, cd, compdbArg, configArg, req)
 		}
 		mcp.Serve(os.Stdin, os.Stdout, runner, root)
@@ -222,7 +226,8 @@ func main() {
 	}
 	warnCompileDB(root) // surface degraded/no-build mode in BOTH daemon and inline paths
 	req := cmd.Request{Cmd: sub, Args: normalize(sub, args), JSON: jsonOut, Depth: depth,
-		Apply: hasFlag("--apply"), Format: format, OutPath: outPath, Focus: flagVal("--focus")}
+		Apply: hasFlag("--apply"), Format: format, OutPath: outPath, Focus: flagVal("--focus"),
+		TreeSitter: hasFlag("--treesitter") || os.Getenv("CCQ_TREESITTER") != ""}
 
 	// Daemon path (default): fast warm clangd.
 	if !noDaemon {
@@ -519,7 +524,7 @@ func parseFlags(in []string) (args []string, root string, jsonOut bool, clangdBi
 			}
 		case "--no-daemon":
 			noDaemon = true
-		case "--apply", "--incremental", "--rebuild", "--background", "--all", "--index":
+		case "--apply", "--incremental", "--rebuild", "--background", "--all", "--index", "--treesitter":
 		case "--format", "--out", "--focus", "--compdb", "--config", "--project", "--older-than":
 			i++ // value consumed via flagVal
 		default:

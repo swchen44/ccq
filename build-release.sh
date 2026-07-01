@@ -70,9 +70,12 @@ for t in "${TARGETS[@]}"; do
   name="ccq-$GOOS-$GOARCH"
   bin="ccq"; [ "$GOOS" = windows ] && bin="ccq.exe"
   echo "  building $name"
-  # -s -w strips symbols → smaller binary; CGO off → fully static single file
+  # -s -w strips symbols → smaller binary; CGO off → fully static single file.
+  # -tags 'grammar_subset grammar_subset_c' links ONLY the tree-sitter C grammar
+  # (for the opt-in --treesitter backend); without it gotreesitter's builtin set
+  # would bloat the binary to ~28MB instead of ~7MB.
   CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH \
-    go build -trimpath -ldflags "-s -w" -o "$OUT/$bin" ./cmd/ccq
+    go build -trimpath -tags 'grammar_subset grammar_subset_c' -ldflags "-s -w" -o "$OUT/$bin" ./cmd/ccq
 
   pkg="$OUT/$name"
   mkdir -p "$pkg"

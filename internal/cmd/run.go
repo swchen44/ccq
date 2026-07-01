@@ -15,32 +15,36 @@ import (
 	"github.com/swchen44/ccq/internal/csrc"
 	"github.com/swchen44/ccq/internal/fnptr"
 	"github.com/swchen44/ccq/internal/lsp"
+	"github.com/swchen44/ccq/internal/tsindex"
 )
 
 // Ctx carries the shared state for a command run.
 type Ctx struct {
-	Client *lsp.Client
-	Root   string
-	JSON   bool
-	Out    io.Writer // where command output goes (stdout, or a daemon response buffer)
+	Client     *lsp.Client
+	Root       string
+	JSON       bool
+	TreeSitter bool      // use the opt-in tree-sitter definition-index backend (--treesitter)
+	Out        io.Writer // where command output goes (stdout, or a daemon response buffer)
 }
 
 // Request is a command to run (used by direct mode and the daemon).
 type Request struct {
-	Cmd     string   `json:"cmd"`
-	Args    []string `json:"args"`
-	JSON    bool     `json:"json"`
-	Depth   int      `json:"depth"`
-	Apply   bool     `json:"apply"`
-	Format  string   `json:"format"`  // export: json|sql|html
-	OutPath string   `json:"outPath"` // export: write to file
-	Focus   string   `json:"focus"`   // export: build a neighborhood around this symbol
+	Cmd        string   `json:"cmd"`
+	Args       []string `json:"args"`
+	JSON       bool     `json:"json"`
+	Depth      int      `json:"depth"`
+	Apply      bool     `json:"apply"`
+	Format     string   `json:"format"`     // export: json|sql|html
+	OutPath    string   `json:"outPath"`    // export: write to file
+	Focus      string   `json:"focus"`      // export: build a neighborhood around this symbol
+	TreeSitter bool     `json:"treesitter"` // def/search: use the tree-sitter text backend
 }
 
 // Dispatch runs a single command. Output goes to c.Out. Returns false for an
 // unknown command.
 func (c *Ctx) Dispatch(r Request) bool {
 	c.JSON = r.JSON
+	c.TreeSitter = r.TreeSitter
 	a := func(i int) string {
 		if i < len(r.Args) {
 			return r.Args[i]
@@ -187,8 +191,8 @@ func (c *Ctx) Search(query string) {
 	// When clangd finds nothing, the #ifdef-blind text index may still locate an
 	// exact-named definition hidden behind a disabled config (no-build mode).
 	if len(syms) == 0 {
-		if defs := cindex.Build(c.Root).Lookup(query); len(defs) > 0 {
-			fmt.Fprintf(c.Out, "// no clangd match; text index (no-build, #ifdef-blind) found:\n")
+		if defs := c.lookupDefs(query); len(defs) > 0 {
+			fmt.Fprintf(c.Out, "// no clangd match; text index (%s, #ifdef-blind) found:\n", c.backendLabel())
 			for _, d := range defs {
 				fmt.Fprintf(c.Out, "%s\t%s:%d\t[%s]\n", query, d.File, d.Line, d.Kind)
 			}
@@ -231,8 +235,26 @@ func (c *Ctx) Def(name string) {
 // failed, so it never pollutes the precise path; results are clearly labelled as
 // approximate (they may be inactive in the user's actual build config). Returns
 // true if it printed at least one definition.
+// lookupDefs runs the definition-index fallback via the selected backend: the
+// regex index (internal/cindex) by default, or the opt-in tree-sitter backend
+// (internal/tsindex) when --treesitter is set. Both are #ifdef-blind.
+func (c *Ctx) lookupDefs(name string) []cindex.Def {
+	if c.TreeSitter {
+		return tsindex.Lookup(c.Root, name)
+	}
+	return cindex.Build(c.Root).Lookup(name)
+}
+
+// backendLabel names the active def-index backend for user-facing output.
+func (c *Ctx) backendLabel() string {
+	if c.TreeSitter {
+		return "tree-sitter"
+	}
+	return "no-build"
+}
+
 func (c *Ctx) textDefFallback(name string) bool {
-	defs := cindex.Build(c.Root).Lookup(name)
+	defs := c.lookupDefs(name)
 	if len(defs) == 0 {
 		return false
 	}
@@ -241,10 +263,10 @@ func (c *Ctx) textDefFallback(name string) bool {
 			Symbol string       `json:"symbol"`
 			Source string       `json:"source"`
 			Defs   []cindex.Def `json:"defs"`
-		}{name, "text-index", defs})
+		}{name, "text-index:" + c.backendLabel(), defs})
 		return true
 	}
-	fmt.Fprintf(c.Out, "// %s — text index (no-build, #ifdef-blind; may be inactive in your build config)\n", name)
+	fmt.Fprintf(c.Out, "// %s — text index (%s, #ifdef-blind; may be inactive in your build config)\n", name, c.backendLabel())
 	for _, d := range defs {
 		end := textDefEndLine(d.File, d.Line)
 		fmt.Fprintf(c.Out, "// %s:%d [%s]\n%s\n", d.File, d.Line, d.Kind,
