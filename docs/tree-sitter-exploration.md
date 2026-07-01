@@ -58,5 +58,33 @@ ccq 有兩個純文字、`#ifdef`-blind 的層(補 clangd 在 no-build 的洞):
 —— 不確定就**留在 regex**(現況 wpa 5/5、呼叫圖 96% 已勝過 cbm/CodeGraph,tree-sitter 是「更穩健」不是「更能幹」)。
 
 ## 現況錨點(2026-07)
-- ccq `HEAD=f5981e8`(origin/main 同步),版本 0.6.4。fnptr 43 PASS / 3 SKIP;wpa `.scan2` 5/5、redis 13(整合測試固化於 `cmd/ccq/bench_test.go`)。
+- ccq 已發 **v0.6.5**(npm `@swchen44/ccq` latest=0.6.5)。fnptr 43 PASS / 3 SKIP;wpa `.scan2` 5/5、redis 13(整合測試固化於 `cmd/ccq/bench_test.go`)。
 - benchmark:`swchen44/cbm-vs-codegraph-bench`,ccq scorecard 在 `results/{wpa,redis}/ccq-scorecard.md`,REPORT §0.5 / §3.7。
+
+---
+
+## Phase 0 結果與結論(2026-07,已實跑)
+
+在隔離 scratch module 實測 `odvcencio/gotreesitter@v0.20.7`(純 Go tree-sitter runtime,build tag `grammar_subset grammar_subset_c`,`CGO_ENABLED=0`)。
+
+**先講結論:先不採用 tree-sitter。** 它修得掉「宣告形式」的 regex edge-case,但**對真實 macro-heavy C 反而不可靠**,加上 +6MB binary、速度較慢——CP 值不划算。ccq 現行「regex + 逐案修 edge-case」(wpa `.scan2` 已 5/5)是更好的取捨。
+
+### 實測數據
+| 面向 | 結果 | 判定 |
+|---|---|---|
+| pure-Go / `CGO_ENABLED=0` build | ✅ 過(gotreesitter 無 cgo、無 wazero/wasm glue) | 可行 |
+| `#ifdef`-blind | ✅ `hidden_fn`(在 `#ifdef NEVER_DEFINED` 內)看得到 | 符合需求 |
+| regex edge-case(col-0 K&R 名字) | ✅ `kr_style_fn`(回傳型別在前一行)正確解析 | tree-sitter 勝 regex |
+| binary 大小 | 空 Go 1.7MB → +C grammar **7.7MB**(+6MB;只嵌 C 可控) | 可接受但明顯 |
+| 速度 | 237KB 檔 ~244ms(~1MB/s) | 比 regex 慢 |
+| **macro-heavy 真實 C 可靠度** | ❌ `driver_nl80211.c`(極 macro-heavy):gotreesitter **20** vs cflow ~87(嚴重低估);`driver_bsd.c`:**54** vs cflow ~24(高估)。兩方向都對不上 | **不可靠** |
+
+### 關鍵洞察
+- tree-sitter 對**乾淨宣告形式**比 regex 穩健(修掉 col-0 K&R 這類 edge-case),**但對 macro-heavy C(nl80211 這種)會嚴重誤解析**——正是它 C=0.58 的已知弱點(macro 不進 AST)。**它是「換一組 edge-case」,不是「消滅 edge-case」。**
+- wazero+tree-sitter 路線(原計畫)另外還不成熟(malivvan 3⭐/ngavinsir WIP,emscripten glue);gotreesitter 是更好的純 Go 路線,但卡在上述 macro 可靠度。
+- **macro 精度本來就要 clangd**——tree-sitter 幫不上,這點不變。
+
+### 決策
+**不採用**(現況 regex + 逐案修 + clangd 精度已在 benchmark 勝出:wpa 5/5、呼叫圖 96%)。**重啟條件**:gotreesitter(或同類純 Go runtime)對 macro-heavy C 的解析品質明顯改善、或找到可設定的解法(已排除:node budget `GOT_PARSE_NODE_LIMIT_SCALE` 無效)。clangd 仍為精度/macro 引擎。
+
+> 實測 spike 在 `$CLAUDE_JOB_DIR/tmp/tsspike`(隔離 module,未動 ccq go.mod;job 清理時自動消失)。
