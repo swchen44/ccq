@@ -4,6 +4,20 @@ All notable changes to ccq are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.6.5] — 2026-07-01
+### Improved
+- **fn-pointer dispatch recall — two more registration shapes** (found by benchmarking against
+  `wpa_supplicant`, lifting `.scan2` recall 3/5 → **5/5**, now ahead of CodeGraph 3/5 and cbm 0/5):
+  - **column-0 function names** (K&R/BSD style, return type on the previous line) — the
+    real-function gate's `reFuncDefHdr` ate the name's first letter, dropping the definition and its
+    ops-struct registration (recovers `wpa_driver_bsd_scan`).
+  - **imperative ops-field assignment** `obj.field = handler;` (dynamically-built vtable /
+    Windows-driver pattern, not a brace initializer), registered conservatively via the single-owner
+    fn-pointer field + real-function gate (recovers `wpa_driver_ndis_scan`).
+- **Benchmark regression tests** (`cmd/ccq/bench_test.go`, `-tags integration`) pin the headline
+  ground truth so a refactor can't silently regress it: wpa `.scan2` 5/5 and redis `lookupCommand`
+  13 callers (skip when the reference repos are absent).
 ### Added
 - **`#ifdef`-blind definition index (no-build fallback)** — a new pure-text, preprocessor-blind
   index (`internal/cindex`) of where functions/structs/unions/enums/typedefs/macros are *defined*,
@@ -193,7 +207,8 @@ All notable changes to ccq are documented here. Format follows
   `compile_commands.json` auto-detect (CMake/Meson/bear), agent SKILL.md.
   Single static Go binary, zero dependencies, cross-platform.
 
-[Unreleased]: https://github.com/swchen44/ccq/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/swchen44/ccq/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/swchen44/ccq/releases/tag/v0.6.5
 [0.6.4]: https://github.com/swchen44/ccq/releases/tag/v0.6.4
 [0.6.3]: https://github.com/swchen44/ccq/releases/tag/v0.6.3
 [0.6.2]: https://github.com/swchen44/ccq/releases/tag/v0.6.2

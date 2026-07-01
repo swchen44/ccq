@@ -255,7 +255,8 @@ make fmt               # gofmt -w .
 
 | 版本 | 日期 | 重点 |
 |------|------|------|
-| [**0.6.4**](https://github.com/swchen44/ccq/releases/tag/v0.6.4) | 2026-07-01 | fnptr 解析更多分派写法(union 字段、嵌套 struct 初始化、数组索引 designator、pointer typedef receiver、deref/cast/跨行分派);无误报回归 |
+| [**0.6.5**](https://github.com/swchen44/ccq/releases/tag/v0.6.5) | 2026-07-01 | `#ifdef`-blind 定义索引(no-build 下 `def`/`search` fallback);fnptr 召回 +2 写法(K&R 行首名、指令式 `ops.f = h;`)→ wpa `.scan2` 5/5;更正 no-build `#ifdef` 文档 |
+| [0.6.4](https://github.com/swchen44/ccq/releases/tag/v0.6.4) | 2026-07-01 | fnptr 解析更多分派写法(union 字段、嵌套 struct 初始化、数组索引 designator、pointer typedef receiver、deref/cast/跨行分派);无误报回归 |
 | [0.6.3](https://github.com/swchen44/ccq/releases/tag/v0.6.3) | 2026-06-30 | fnptr 涵盖更多注册写法(typedef 表、嵌套、混用、cast/macro);release 加测试关卡 |
 | [0.6.2](https://github.com/swchen44/ccq/releases/tag/v0.6.2) | 2026-06-30 | npm 安装(`npm i -g @swchen44/ccq`);skill 移到 `skills/ccq/`;明确 C/C++ only 语言范围 |
 | [0.6.1](https://github.com/swchen44/ccq/releases/tag/v0.6.1) | 2026-06-29 | 文档:实测 ROI case study(token/成本/完成度/可预测性 A/B);requirement 与 design 同步 |

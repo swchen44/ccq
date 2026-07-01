@@ -336,7 +336,8 @@ unit test for new logic (and an integration test if it touches the clangd path).
 
 | Version | Date | Highlights |
 |---------|------|-----------|
-| [**0.6.4**](https://github.com/swchen44/ccq/releases/tag/v0.6.4) | 2026-07-01 | fn-pointer heuristic resolves more dispatch shapes (union fields, nested-struct init, array-index designators, pointer-typedef receivers, deref/cast/cross-line dispatch); no false-positive regression |
+| [**0.6.5**](https://github.com/swchen44/ccq/releases/tag/v0.6.5) | 2026-07-01 | `#ifdef`-blind definition index (no-build `def`/`search` fallback); fn-pointer recall +2 shapes (col-0 K&R names, imperative `ops.f = h;`) → wpa `.scan2` 5/5; corrected no-build `#ifdef` docs |
+| [0.6.4](https://github.com/swchen44/ccq/releases/tag/v0.6.4) | 2026-07-01 | fn-pointer heuristic resolves more dispatch shapes (union fields, nested-struct init, array-index designators, pointer-typedef receivers, deref/cast/cross-line dispatch); no false-positive regression |
 | [0.6.3](https://github.com/swchen44/ccq/releases/tag/v0.6.3) | 2026-06-30 | fn-pointer heuristic covers more registration styles (typedef tables, nested rows, mixed, cast/macro); test-gated releases |
 | [0.6.2](https://github.com/swchen44/ccq/releases/tag/v0.6.2) | 2026-06-30 | npm install (`npm i -g @swchen44/ccq`); skill moved to `skills/ccq/`; explicit C/C++-only language scope |
 | [0.6.1](https://github.com/swchen44/ccq/releases/tag/v0.6.1) | 2026-06-29 | docs: measured ROI case study (token/cost/completion/predictability A/B); requirement & design sync |
