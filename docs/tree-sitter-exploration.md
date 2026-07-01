@@ -70,14 +70,22 @@ ccq 有兩個純文字、`#ifdef`-blind 的層(補 clangd 在 no-build 的洞):
 **先講結論:先不採用 tree-sitter。** 它修得掉「宣告形式」的 regex edge-case,但**對真實 macro-heavy C 反而不可靠**,加上 +6MB binary、速度較慢——CP 值不划算。ccq 現行「regex + 逐案修 edge-case」(wpa `.scan2` 已 5/5)是更好的取捨。
 
 ### 實測數據
-| 面向 | 結果 | 判定 |
-|---|---|---|
-| pure-Go / `CGO_ENABLED=0` build | ✅ 過(gotreesitter 無 cgo、無 wazero/wasm glue) | 可行 |
-| `#ifdef`-blind | ✅ `hidden_fn`(在 `#ifdef NEVER_DEFINED` 內)看得到 | 符合需求 |
-| regex edge-case(col-0 K&R 名字) | ✅ `kr_style_fn`(回傳型別在前一行)正確解析 | tree-sitter 勝 regex |
-| binary 大小 | 空 Go 1.7MB → +C grammar **7.7MB**(+6MB;只嵌 C 可控) | 可接受但明顯 |
-| 速度 | 237KB 檔 ~244ms(~1MB/s) | 比 regex 慢 |
-| **macro-heavy 真實 C 可靠度** | ❌ `driver_nl80211.c`(極 macro-heavy):gotreesitter **20** vs cflow ~87(嚴重低估);`driver_bsd.c`:**54** vs cflow ~24(高估)。兩方向都對不上 | **不可靠** |
+
+**注意:這六項不是同一種比較,分三類**——先看「對照基準（和什麼比）」欄再讀,才不會誤會：
+- **A 可行性關卡**（第 1、2 項）：和 **ccq 的硬需求** 比，pass/fail，不是跟對手比。
+- **B vs 現行 regex**（第 3、4、5 項）：和 **ccq 目前的 regex 做法** 比優劣/成本。
+- **C vs 中立 ground-truth**（第 6 項）：和 **cflow（中立第三方工具）算出的真實函式數** 比準不準。
+
+| # | 面向 | 對照基準（和什麼比） | gotreesitter 實測 | 判定 |
+|---|---|---|---|---|
+| 1 | pure-Go / `CGO_ENABLED=0` build | **A** ccq 硬需求：無 C toolchain、五平台交叉編（原生 cgo binding **過不了**這關） | ✅ build 過（無 cgo、無 wazero/wasm glue） | 通過關卡 |
+| 2 | `#ifdef`-blind | **A** 需求：要看得到停用 config 內的 code（**clangd no-build 看不到**） | ✅ `#ifdef NEVER_DEFINED` 內的 `hidden_fn` 抓得到 | 符合需求 |
+| 3 | 宣告形式穩健度 | **B vs ccq 的 regex**：col-0 K&R 名字（回傳型別在前一行）是 regex 這輪才手動修好的 edge-case | ✅ 免修就正確解析 `kr_style_fn` | tree-sitter 勝 regex |
+| 4 | binary 大小 | **B vs 現行 ccq**（純 regex、無此依賴）：空 Go 1.7MB → 加 gotreesitter+C grammar | **7.7MB**（+6MB；只嵌 C 可控） | 成本：明顯變大 |
+| 5 | 解析速度 | **B vs 現行 regex 掃描**（regex 掃全 repo 很快） | 237KB 檔 ~244ms（~1MB/s） | 成本：較慢 |
+| 6 | macro-heavy 真實 C 準不準 | **C vs cflow ground-truth 的函式定義數** | `driver_nl80211.c`：**20** vs ~87（漏一半）；`driver_bsd.c`：**54** vs ~24（多報一倍）。兩方向都對不上 | **不可靠** |
+
+> 為什麼要三種基準：A 先確認「這條路對 ccq 合法嗎」（pure-Go、#ifdef-blind）；通過後 B 問「比現行 regex 划算嗎」（穩健度賺、大小/速度賠）；最後 C 問「它自己準不準」（macro-heavy 下不準）。**第 6 項才是致命傷**：tree-sitter 的賣點是「更穩健的結構解析」，但在最需要穩健的 macro-heavy 檔上反而對不上 ground-truth。
 
 ### 關鍵洞察
 - tree-sitter 對**乾淨宣告形式**比 regex 穩健(修掉 col-0 K&R 這類 edge-case),**但對 macro-heavy C(nl80211 這種)會嚴重誤解析**——正是它 C=0.58 的已知弱點(macro 不進 AST)。**它是「換一組 edge-case」,不是「消滅 edge-case」。**
