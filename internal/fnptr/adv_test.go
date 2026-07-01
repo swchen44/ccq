@@ -290,6 +290,16 @@ func TestAdvSplitReturnDef(t *testing.T) {
 	}
 }
 
+// A: an ops field registered by an imperative `obj.field = handler;` statement
+// (not a brace initializer) must still bridge the dispatch. Mirrors
+// wpa_supplicant's `wpa_driver_ndis_ops.scan2 = wpa_driver_ndis_scan;` (the last
+// of the 5 .scan2 handlers the fnptr benchmark missed).
+func TestAdvImperativeOpsAssign(t *testing.T) {
+	if !hasCaller(t, "oa_handler", "oa_dispatch") {
+		t.Error("oa_handler should reach oa_dispatch: it is registered via the imperative assignment `OAOPS.oascan = oa_handler;`")
+	}
+}
+
 func itoa(i int) string {
 	if i == 0 {
 		return "0"

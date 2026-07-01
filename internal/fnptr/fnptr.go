@@ -62,6 +62,7 @@ var (
 	reCast         = regexp.MustCompile(`^\(\s*[\w\s\*]+\)\s*(.+)$`) // (type) expr  -> expr
 	reMacro1       = regexp.MustCompile(`^(\w+)\s*\(\s*(.+?)\s*\)$`) // MACRO(inner)
 	reFieldAssign  = regexp.MustCompile(`(\w+)\s*(?:->|\.)\s*(\w+)\s*=\s*(\w+)\s*(?:->|\.)\s*(\w+)`)
+	reOpsAssign    = regexp.MustCompile(`\w+\s*(?:->|\.)\s*(\w+)\s*=\s*&?\s*(\w+)\s*;`) // obj.field = [&]handler;
 	reFuncDefBrace = regexp.MustCompile(`\b([A-Za-z_]\w*)\s*\([^()]*\)\s*\{`)
 	reFuncDefHdr   = regexp.MustCompile(`^(?:[A-Za-z_][\w\s\*]*\s)?([A-Za-z_]\w*)\s*\([^;{]*$`) // [ret] name(...   (name may be at col 0 when the return type is on the previous line)
 )
@@ -398,6 +399,18 @@ func (ix *index) scanRegistrations(f string) {
 			continue
 		}
 		ix.scanRow(st, layout, body) // top level is just a (possibly nested) row
+	}
+	// Imperative registration: `obj.field = handler;` (a statement, not a brace
+	// initializer — the dynamically-built vtable / Windows-driver pattern). Keyed
+	// conservatively: the field must be an fn-pointer field of exactly ONE struct
+	// (so we can infer the key without resolving obj's type); ambiguous fields are
+	// dropped. addReg's real-function gate bounds the handler.
+	for _, m := range reOpsAssign.FindAllStringSubmatch(joined, -1) {
+		field, handler := m[1], m[2]
+		owners := ix.fieldToStructs[field]
+		if len(owners) == 1 {
+			ix.addReg(owners[0], field, handler)
+		}
 	}
 }
 
